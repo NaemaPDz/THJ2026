@@ -7,11 +7,9 @@ public class PlayerController : MonoBehaviour
 	public float walkSpeed = 3f;
 	public float sprintSpeed = 5f;
 
-	private Camera mainCamera;
-	private Plane groundPlane;
-
 	private Rigidbody2D rb;
 	private HeartRateSystem heartRate;
+	private Animator animator;
 
 	private Vector2 moveInput;
 	private bool sprintHeld;
@@ -20,6 +18,7 @@ public class PlayerController : MonoBehaviour
 	{
 		rb = GetComponent<Rigidbody2D>();
 		heartRate = GetComponent<HeartRateSystem>();
+		animator = GetComponentInChildren<Animator>();
 
 		rb.gravityScale = 0f;
 		rb.freezeRotation = true;
@@ -48,5 +47,20 @@ public class PlayerController : MonoBehaviour
 		rb.MovePosition(
 			rb.position + moveInput * speed * Time.fixedDeltaTime
 		);
+
+		animator.SetFloat("Speed", moveInput.sqrMagnitude * speed);
+		animator.SetBool("Sprint", isSprinting);
+
+		if (moveInput.sqrMagnitude > 0f)
+		{
+			if (moveInput.x < 0f)
+			{
+				transform.localScale = new Vector3(-1f, 1f, 1f);
+			}
+			else if (moveInput.x > 0f)
+			{
+				transform.localScale = new Vector3(1f, 1f, 1f);
+			}
+		}
 	}
 }

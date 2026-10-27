@@ -1,0 +1,28 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f643a45fc911de449aab3c6679597651, type: 3}
+  m_Name: Weapon_Pipe
+  m_EditorClassIdentifier: Assembly-CSharp::WeaponData
+  itemId: WEA_001
+  itemName: Pipe
+  description: Just Bonk It !
+  icon: {fileID: -9095717837082945937, guid: daedc624a580bf4498c0b926a6aada29, type: 3}
+  worldPrefab: {fileID: 6589807486413108434, guid: 4071621aed382cf47968f860a4f039db, type: 3}
+  attackType: 0
+  staggerDamage: 17
+  attackCooldown: 0.5
+  range: 1.5
+  projectileSpeed: 0
+  maxAmmo: 0
+  unlimitedAmmo: 1
+  slowMultiplier: 0.7
+  slowDuration: 0.5
