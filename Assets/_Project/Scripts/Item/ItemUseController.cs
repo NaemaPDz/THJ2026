@@ -57,6 +57,8 @@ public class ItemUseController : MonoBehaviour
 		if (weapon == null)
 			return;
 
+		SoundEmitter.EmitSound(transform.position, 5f);
+
 		if (weapon.WeaponData.attackType == AttackType.Melee)
 		{
 			if (meleeAttack != null)

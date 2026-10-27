@@ -1,55 +1,534 @@
-
 using UnityEngine;
 using UnityEngine.AI;
 using System.Collections;
 
 public class MonsterAI : MonoBehaviour, IDamageable
 {
+	public enum MonsterState
+	{
+		Patrol,
+		Investigate,
+		Chase,
+		Stagger,
+		Stunned,
+		Kill
+	}
+
+	[Header("Stagger System")]
+	[SerializeField] private float maxStaggerHP = 100f;
+	[SerializeField] private float currentStaggerHP = 100f;
+	[SerializeField] private float staggerDuration = 5f;
+
+	[Header("Target")]
 	[SerializeField] private Transform target;
+	[SerializeField] private float killDistance = 0.7f;
+	[SerializeField] private PlayerController playerController;
+	[SerializeField] private Rigidbody2D playerRb;
+
+	[Header("Patrol")]
+	[SerializeField] private Transform[] patrolPoints;
+	[SerializeField] private float patrolSpeed = 2f;
+	[SerializeField] private float waitAtPoint = 1f;
+
+	[Header("Search After Losing Sight")]
+	[SerializeField] private float loseSightDelay = 0.5f;
+	[SerializeField] private float searchDuration = 3f;
+
+	private Vector3 lastKnownPosition;
+	private float lostSightTimer;
+	private float searchTimer;
+	private bool reachedSearchPosition;
+
+	[Header("Hit Visual")]
+	[SerializeField] private SpriteRenderer spriteRenderer;
+	[SerializeField] private float hitFlashDuration = 0.1f;
+
+	private Color originalColor;
+	private Coroutine hitFlashCoroutine;
 
 	private NavMeshAgent agent;
+	private MonsterVision vision;
+
+	private MonsterState currentState = MonsterState.Patrol;
+	private MonsterState previousState;
 
 	private float normalSpeed;
+	private int currentPointIndex;
+	private float waitTimer;
+	private bool isWaiting;
+	private bool wasChasingBeforeStagger;
+
 	private Coroutine slowCoroutine;
+	private Coroutine staggerCoroutine;
+
+	private void OnEnable()
+	{
+		SoundEmitter.OnSoundMade += HandleSoundHeard;
+	}
+
+	private void OnDisable()
+	{
+		SoundEmitter.OnSoundMade -= HandleSoundHeard;
+	}
 
 	private void Start()
 	{
 		agent = GetComponent<NavMeshAgent>();
+		vision = GetComponent<MonsterVision>();
+
+		if (vision != null)
+		{
+			vision.SetTarget(target);
+		}
+		else
+		{
+			Debug.LogWarning(
+				"[MonsterAI] MonsterVision is missing!",
+				this
+			);
+		}
+
+		if (agent == null)
+		{
+			Debug.LogError("[MonsterAI] Missing NavMeshAgent!", this);
+			enabled = false;
+			return;
+		}
 
 		agent.updateRotation = false;
 		agent.updateUpAxis = false;
 
 		normalSpeed = agent.speed;
+		agent.speed = patrolSpeed;
 
-		Debug.Log($"[MonsterAI] Normal Speed: {normalSpeed}", this);
+		if (spriteRenderer == null)
+			spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+
+		if (spriteRenderer != null)
+			originalColor = spriteRenderer.color;
+		else
+			Debug.LogWarning("[MonsterAI] No SpriteRenderer found!", this);
+
+		if (patrolPoints != null && patrolPoints.Length > 0)
+		{
+			currentPointIndex = 0;
+			MoveToPatrolPoint();
+		}
 	}
 
 	private void Update()
 	{
-		if (target != null)
+		if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+			return;
+
+		// ระหว่าง Stagger หรือ Stunned ห้าม AI สั่งเดิน
+		if (currentState == MonsterState.Stagger ||
+			currentState == MonsterState.Stunned ||
+			currentState == MonsterState.Kill)
 		{
-			agent.SetDestination(target.position);
+			return;
+		}
+
+		if (vision != null)
+		{
+			if (vision.CanSeeTarget)
+			{
+				lostSightTimer = 0f;
+
+				if (currentState == MonsterState.Patrol ||
+					currentState == MonsterState.Investigate)
+				{
+					Chase(target);
+				}
+
+				if (currentState == MonsterState.Chase && target != null)
+				{
+					lastKnownPosition = target.position;
+				}
+			}
+			else if (currentState == MonsterState.Chase)
+			{
+				lostSightTimer += Time.deltaTime;
+
+				if (lostSightTimer >= loseSightDelay)
+				{
+					lostSightTimer = 0f;
+					StartSearching();
+				}
+			}
+		}
+
+		if (CheckKillDistance())
+			return;
+
+		switch (currentState)
+		{
+			case MonsterState.Patrol:
+				UpdatePatrol();
+				break;
+
+			case MonsterState.Investigate:
+				UpdateInvestigate();
+				break;
+
+			case MonsterState.Chase:
+				UpdateChase();
+				break;
 		}
 	}
+
+	// =========================
+	// PATROL
+	// =========================
+
+	private void UpdatePatrol()
+	{
+		if (patrolPoints == null || patrolPoints.Length == 0)
+			return;
+
+		if (!agent.pathPending && HasArrived())
+		{
+			if (!isWaiting)
+			{
+				isWaiting = true;
+				waitTimer = waitAtPoint;
+				agent.isStopped = true;
+			}
+
+			waitTimer -= Time.deltaTime;
+
+			if (waitTimer <= 0f)
+			{
+				isWaiting = false;
+
+				currentPointIndex =
+					(currentPointIndex + 1) % patrolPoints.Length;
+
+				MoveToPatrolPoint();
+			}
+		}
+	}
+
+	private void MoveToPatrolPoint()
+	{
+		if (patrolPoints == null ||
+			patrolPoints.Length == 0 ||
+			patrolPoints[currentPointIndex] == null)
+		{
+			return;
+		}
+
+		agent.speed = patrolSpeed;
+		agent.isStopped = false;
+
+		agent.SetDestination(
+			patrolPoints[currentPointIndex].position
+		);
+	}
+
+	private void ReturnToNearestPatrolPoint()
+	{
+		if (patrolPoints == null || patrolPoints.Length == 0)
+		{
+			SetState(MonsterState.Patrol);
+			return;
+		}
+
+		int nearestIndex = -1;
+		float nearestDistance = float.MaxValue;
+
+		for (int i = 0; i < patrolPoints.Length; i++)
+		{
+			if (patrolPoints[i] == null)
+				continue;
+
+			float distance = Vector3.Distance(
+				transform.position,
+				patrolPoints[i].position
+			);
+
+			if (distance < nearestDistance)
+			{
+				nearestDistance = distance;
+				nearestIndex = i;
+			}
+		}
+
+		if (nearestIndex >= 0)
+		{
+			currentPointIndex = nearestIndex;
+			isWaiting = false;
+
+			SetState(MonsterState.Patrol);
+		}
+	}
+
+	// =========================
+	// INVESTIGATE
+	// =========================
+
+	public void Investigate(Vector3 position)
+	{
+		if (IsLockedState())
+			return;
+
+		SetState(MonsterState.Investigate);
+
+		agent.isStopped = false;
+		agent.SetDestination(position);
+	}
+
+	private void UpdateInvestigate()
+	{
+		if (agent.pathPending)
+			return;
+
+		if (!reachedSearchPosition)
+		{
+			if (!HasArrived())
+				return;
+
+			reachedSearchPosition = true;
+			searchTimer = searchDuration;
+
+			agent.isStopped = true;
+			agent.ResetPath();
+			return;
+		}
+
+		searchTimer -= Time.deltaTime;
+
+		if (searchTimer <= 0f)
+		{
+			ReturnToNearestPatrolPoint();
+		}
+	}
+
+	private void HandleSoundHeard(Vector3 soundPosition, float hearingRadius)
+	{
+		if (agent == null || !agent.enabled) return;
+
+		// ไม่รับเสียงขณะอยู่ในสถานะที่ไม่ควรถูกรบกวน
+		if (currentState == MonsterState.Chase ||
+			currentState == MonsterState.Stagger ||
+			currentState == MonsterState.Stunned ||
+			currentState == MonsterState.Kill)
+		{
+			return;
+		}
+
+		float distance = Vector2.Distance(
+			transform.position,
+			soundPosition
+		);
+
+		if (distance > hearingRadius) return;
+
+		lastKnownPosition = soundPosition;
+		StartSearching();
+	}
+
+	// =========================
+	// CHASE
+	// =========================
+
+	public void Chase(Transform newTarget)
+	{
+		if (newTarget == null)
+			return;
+
+		lostSightTimer = 0f;
+		reachedSearchPosition = false;
+
+		if (newTarget != null)
+		{
+			lastKnownPosition = newTarget.position;
+		}
+
+		// ไม่ให้ขัดจังหวะสถานะพิเศษ
+		if (currentState == MonsterState.Stagger ||
+			currentState == MonsterState.Stunned ||
+			currentState == MonsterState.Kill)
+			return;
+
+		target = newTarget;
+
+		if (vision != null)
+		{
+			vision.SetTarget(target);
+		}
+
+		SetState(MonsterState.Chase);
+
+		agent.isStopped = false;
+	}
+
+	private void UpdateChase()
+	{
+		if (target == null)
+		{
+			SetState(MonsterState.Patrol);
+			return;
+		}
+
+		// อัปเดตตำแหน่งผู้เล่นระหว่างไล่ตาม
+		agent.SetDestination(target.position);
+	}
+
+
+	private bool CheckKillDistance()
+	{
+		if (vision == null || vision.Target == null)
+			return false;
+
+		if (currentState == MonsterState.Kill)
+			return true;
+
+		float distance = Vector2.Distance(
+			transform.position,
+			vision.Target.position
+		);
+
+		if (distance > killDistance)
+			return false;
+
+		KillPlayer();
+		return true;
+	}
+
+	private void KillPlayer()
+	{
+		currentState = MonsterState.Kill;
+
+		// หยุดมอนสเตอร์
+		if (agent != null && agent.enabled)
+		{
+			agent.isStopped = true;
+			agent.ResetPath();
+		}
+
+		// หยุดการควบคุมผู้เล่น
+		if (playerController != null)
+			playerController.Death();
+
+		// หยุดฟิสิกส์ของผู้เล่น
+		if (playerRb != null)
+		{
+			playerRb.linearVelocity = Vector2.zero;
+			playerRb.constraints = RigidbodyConstraints2D.FreezeAll;
+		}
+
+		Debug.Log("Player killed by monster!");
+	}
+
+
+	private void StartSearching()
+	{
+		if (currentState == MonsterState.Stagger ||
+			currentState == MonsterState.Stunned ||
+			currentState == MonsterState.Kill)
+			return;
+
+		currentState = MonsterState.Investigate;
+
+		reachedSearchPosition = false;
+		searchTimer = searchDuration;
+
+		agent.isStopped = false;
+		agent.SetDestination(lastKnownPosition);
+	}
+
+	// =========================
+	// DAMAGE
+	// =========================
 
 	public void TakeHit(
 		float staggerDamage,
 		float slowMultiplier,
 		float slowDuration)
 	{
+		if (currentState == MonsterState.Kill ||
+			currentState == MonsterState.Stagger ||
+			currentState == MonsterState.Stunned)
+		{
+			return;
+		}
+
+		FlashRed();
+
+		currentStaggerHP -= staggerDamage;
+		currentStaggerHP = Mathf.Max(0f, currentStaggerHP);
+
 		Debug.Log(
-			$"[MonsterAI] ถูกโจมตี! Stagger: {staggerDamage}",
+			$"[MonsterAI] Stagger HP: {currentStaggerHP}/{maxStaggerHP}",
 			this
 		);
 
-		ApplySlow(slowMultiplier, slowDuration);
+		if (currentStaggerHP <= 0f)
+		{
+			ApplyStagger();
+			return;
+		}
+
+		if (slowDuration > 0f)
+		{
+			ApplySlow(slowMultiplier, slowDuration);
+		}
+	}
+
+	private void ApplyStagger()
+	{
+		if (staggerCoroutine != null)
+			StopCoroutine(staggerCoroutine);
+
+		wasChasingBeforeStagger =
+			currentState == MonsterState.Chase;
+
+		previousState = currentState;
+
+		currentState = MonsterState.Stagger;
+
+		SetStaggerColor(true);
+
+		staggerCoroutine = StartCoroutine(StaggerRoutine());
+	}
+
+	private IEnumerator StaggerRoutine()
+	{
+		agent.isStopped = true;
+		agent.ResetPath();
+
+		yield return new WaitForSeconds(staggerDuration);
+
+
+		currentStaggerHP = maxStaggerHP;
+		SetStaggerColor(false);
+
+		staggerCoroutine = null;
+
+		currentState = previousState;
+		agent.isStopped = false;
+
+		if (wasChasingBeforeStagger)
+		{
+			StartSearching();
+			yield break;
+		}
+
+		switch (currentState)
+		{
+			case MonsterState.Patrol:
+				isWaiting = false;
+				MoveToPatrolPoint();
+				break;
+
+			case MonsterState.Investigate:
+				break;
+		}
 	}
 
 	private void ApplySlow(float multiplier, float duration)
 	{
-		if (agent == null)
-			return;
-
 		if (slowCoroutine != null)
 			StopCoroutine(slowCoroutine);
 
@@ -64,7 +543,118 @@ public class MonsterAI : MonoBehaviour, IDamageable
 
 		yield return new WaitForSeconds(duration);
 
-		agent.speed = normalSpeed;
+		agent.speed = currentState == MonsterState.Patrol
+			? patrolSpeed
+			: normalSpeed;
+
 		slowCoroutine = null;
+	}
+
+	private void FlashRed()
+	{
+		if (spriteRenderer == null)
+			return;
+
+		// ถ้ากำลัง Stagger ให้สีดำมีความสำคัญกว่า
+		if (currentState == MonsterState.Stagger)
+			return;
+
+		if (hitFlashCoroutine != null)
+			StopCoroutine(hitFlashCoroutine);
+
+		hitFlashCoroutine = StartCoroutine(HitFlashRoutine());
+	}
+
+	private IEnumerator HitFlashRoutine()
+	{
+		spriteRenderer.color = new Color(
+			1f, 0f, 0f, originalColor.a
+		);
+
+		yield return new WaitForSeconds(hitFlashDuration);
+
+		// คืนสีเดิม เฉพาะเมื่อไม่ได้กำลัง Stagger
+		if (currentState != MonsterState.Stagger)
+			spriteRenderer.color = originalColor;
+
+		hitFlashCoroutine = null;
+	}
+
+	private void SetStaggerColor(bool active)
+	{
+		if (spriteRenderer == null)
+			return;
+
+		if (active)
+		{
+			// ยกเลิกแฟลชแดงที่อาจกำลังทำงาน
+			if (hitFlashCoroutine != null)
+			{
+				StopCoroutine(hitFlashCoroutine);
+				hitFlashCoroutine = null;
+			}
+
+			spriteRenderer.color = new Color(
+				0f, 0f, 0f, originalColor.a
+			);
+		}
+		else
+		{
+			spriteRenderer.color = originalColor;
+		}
+	}
+
+	// =========================
+	// STATE / HELPERS
+	// =========================
+
+	public void SetState(MonsterState newState)
+	{
+		if (staggerCoroutine != null &&
+			newState != MonsterState.Stagger)
+		{
+			StopCoroutine(staggerCoroutine);
+			staggerCoroutine = null;
+		}
+
+		currentState = newState;
+
+		if (agent == null || !agent.enabled || !agent.isOnNavMesh)
+			return;
+
+		switch (newState)
+		{
+			case MonsterState.Patrol:
+				isWaiting = false;
+				agent.isStopped = false;
+				MoveToPatrolPoint();
+				break;
+
+			case MonsterState.Investigate:
+			case MonsterState.Chase:
+				agent.isStopped = false;
+				break;
+
+			case MonsterState.Stagger:
+			case MonsterState.Stunned:
+			case MonsterState.Kill:
+				agent.isStopped = true;
+				agent.ResetPath();
+				break;
+		}
+	}
+
+	private bool HasArrived()
+	{
+		return !agent.pathPending &&
+			   agent.remainingDistance <=
+			   agent.stoppingDistance + 0.05f;
+	}
+
+	private bool IsLockedState()
+	{
+		return currentState == MonsterState.Stagger ||
+			   currentState == MonsterState.Stunned ||
+			   currentState == MonsterState.Kill;
 	}
 }

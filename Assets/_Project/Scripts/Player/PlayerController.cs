@@ -63,4 +63,17 @@ public class PlayerController : MonoBehaviour
 			}
 		}
 	}
+
+	public void Death()
+	{
+		animator.SetBool("Death", true);
+
+		foreach (MonoBehaviour script in GetComponents<MonoBehaviour>())
+		{
+			if (script != this)
+				script.enabled = false;
+		}
+
+		this.enabled = false;
+	}
 }

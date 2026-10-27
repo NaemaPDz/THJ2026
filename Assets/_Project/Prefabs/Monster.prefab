@@ -124,8 +124,10 @@ GameObject:
   m_Component:
   - component: {fileID: 4326770757002580926}
   - component: {fileID: 5150492098582880308}
-  - component: {fileID: 6587931513545072090}
   - component: {fileID: 3698071276816288485}
+  - component: {fileID: 6587931513545072090}
+  - component: {fileID: 6786020743201301400}
+  - component: {fileID: 4883654950403476087}
   m_Layer: 7
   m_Name: Monster
   m_TagString: Player
@@ -195,6 +197,28 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 0.49054158, y: 0.4862905}
   m_EdgeRadius: 0
+--- !u!195 &3698071276816288485
+NavMeshAgent:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2862150259393778320}
+  m_Enabled: 1
+  m_AgentTypeID: 0
+  m_Radius: 0.25
+  m_Speed: 2
+  m_Acceleration: 8
+  avoidancePriority: 50
+  m_AngularSpeed: 0
+  m_StoppingDistance: 0.1
+  m_AutoTraverseOffMeshLink: 1
+  m_AutoBraking: 1
+  m_AutoRepath: 1
+  m_Height: 0.7
+  m_BaseOffset: 0
+  m_WalkableMask: 4294967295
+  m_ObstacleAvoidanceType: 4
 --- !u!114 &6587931513545072090
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -207,26 +231,66 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4b2b244870bd34b43b3b37b9a0c933fb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::MonsterAI
+  maxStaggerHP: 100
+  currentStaggerHP: 100
+  staggerDuration: 5
   target: {fileID: 0}
---- !u!195 &3698071276816288485
-NavMeshAgent:
+  patrolPoints:
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  - {fileID: 0}
+  patrolSpeed: 2
+  waitAtPoint: 1
+  spriteRenderer: {fileID: 5267957057255899516}
+  hitFlashDuration: 0.1
+--- !u!114 &6786020743201301400
+MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2862150259393778320}
   m_Enabled: 1
-  m_AgentTypeID: 0
-  m_Radius: 0.25
-  m_Speed: 3
-  m_Acceleration: 8
-  avoidancePriority: 50
-  m_AngularSpeed: 120
-  m_StoppingDistance: 1
-  m_AutoTraverseOffMeshLink: 1
-  m_AutoBraking: 1
-  m_AutoRepath: 1
-  m_Height: 0.7
-  m_BaseOffset: 0
-  m_WalkableMask: 4294967295
-  m_ObstacleAvoidanceType: 4
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 71e53f117f617f54fb3bd60274a39e02, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterMovement
+--- !u!114 &4883654950403476087
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2862150259393778320}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d4a3876af19d6164a827da0a016aa61c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::MonsterVision
+  target: {fileID: 0}
+  visionRange: 4
+  visionAngle: 90
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 8
+  visionCheckInterval: 0.1
