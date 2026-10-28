@@ -26,3 +26,4 @@ MonoBehaviour:
   unlimitedAmmo: 1
   slowMultiplier: 0.7
   slowDuration: 0.5
+  useSound: 13

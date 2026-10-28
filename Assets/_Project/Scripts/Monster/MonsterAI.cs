@@ -22,6 +22,8 @@ public class MonsterAI : MonoBehaviour, IDamageable
 	[Header("Target")]
 	[SerializeField] private Transform target;
 	[SerializeField] private float killDistance = 0.7f;
+	[SerializeField, Min(0f)] private float missRecoveryMin = 1f;
+	[SerializeField, Min(0f)] private float missRecoveryMax = 2f;
 	[SerializeField] private PlayerController playerController;
 	[SerializeField] private Rigidbody2D playerRb;
 
@@ -60,6 +62,8 @@ public class MonsterAI : MonoBehaviour, IDamageable
 
 	private Coroutine slowCoroutine;
 	private Coroutine staggerCoroutine;
+	private bool isAttackRecovering;
+	private SacrificeEffectReceiver targetSacrificeEffects;
 
 	private void OnEnable()
 	{
@@ -88,6 +92,8 @@ public class MonsterAI : MonoBehaviour, IDamageable
 			);
 		}
 
+		CacheTargetReferences();
+
 		if (agent == null)
 		{
 			Debug.LogError("[MonsterAI] Missing NavMeshAgent!", this);
@@ -97,6 +103,7 @@ public class MonsterAI : MonoBehaviour, IDamageable
 
 		agent.updateRotation = false;
 		agent.updateUpAxis = false;
+		agent.isStopped = !FaustRunState.GameplayActive;
 
 		normalSpeed = agent.speed;
 		agent.speed = patrolSpeed;
@@ -118,6 +125,9 @@ public class MonsterAI : MonoBehaviour, IDamageable
 
 	private void Update()
 	{
+		if (!FaustRunState.GameplayActive)
+			return;
+
 		if (agent == null || !agent.enabled || !agent.isOnNavMesh)
 			return;
 
@@ -138,6 +148,13 @@ public class MonsterAI : MonoBehaviour, IDamageable
 				if (currentState == MonsterState.Patrol ||
 					currentState == MonsterState.Investigate)
 				{
+					AudioManager.Instance?.PlaySfxAt(SoundId.WorldAlert, transform.position);
+					AudioManager.Instance?.PlayRandomSfxAt(
+						transform.position,
+						SoundId.MonsterAlert1,
+						SoundId.MonsterAlert2,
+						SoundId.MonsterAlert3
+					);
 					Chase(target);
 				}
 
@@ -219,7 +236,7 @@ public class MonsterAI : MonoBehaviour, IDamageable
 		}
 
 		agent.speed = patrolSpeed;
-		agent.isStopped = false;
+		agent.isStopped = !FaustRunState.GameplayActive;
 
 		agent.SetDestination(
 			patrolPoints[currentPointIndex].position
@@ -352,6 +369,7 @@ public class MonsterAI : MonoBehaviour, IDamageable
 			return;
 
 		target = newTarget;
+		CacheTargetReferences();
 
 		if (vision != null)
 		{
@@ -361,6 +379,21 @@ public class MonsterAI : MonoBehaviour, IDamageable
 		SetState(MonsterState.Chase);
 
 		agent.isStopped = false;
+	}
+
+	private void CacheTargetReferences()
+	{
+		targetSacrificeEffects = target != null
+			? target.GetComponent<SacrificeEffectReceiver>()
+			: null;
+
+		if (target != null)
+		{
+			if (playerController == null)
+				playerController = target.GetComponent<PlayerController>();
+			if (playerRb == null)
+				playerRb = target.GetComponent<Rigidbody2D>();
+		}
 	}
 
 	private void UpdateChase()
@@ -378,6 +411,9 @@ public class MonsterAI : MonoBehaviour, IDamageable
 
 	private bool CheckKillDistance()
 	{
+		if (isAttackRecovering)
+			return true;
+
 		if (vision == null || vision.Target == null)
 			return false;
 
@@ -392,8 +428,60 @@ public class MonsterAI : MonoBehaviour, IDamageable
 		if (distance > killDistance)
 			return false;
 
-		KillPlayer();
+		AudioManager.Instance?.PlayRandomSfxAt(
+			transform.position,
+			SoundId.MonsterAttack1,
+			SoundId.MonsterAttack2,
+			SoundId.MonsterAttack3,
+			SoundId.MonsterAttack4
+		);
+
+		float missChance = targetSacrificeEffects != null
+			? targetSacrificeEffects.AttackMissChance
+			: 0f;
+		if (Random.value < missChance)
+			StartCoroutine(MissedAttackRecovery());
+		else
+			KillPlayer();
 		return true;
+	}
+
+	private IEnumerator MissedAttackRecovery()
+	{
+		isAttackRecovering = true;
+		if (playerController != null)
+			playerController.PlayHurt();
+
+		if (agent != null && agent.enabled && agent.isOnNavMesh)
+		{
+			agent.isStopped = true;
+			agent.ResetPath();
+		}
+
+		float recoveryMin = targetSacrificeEffects != null
+			? targetSacrificeEffects.MissRecoveryMin
+			: missRecoveryMin;
+		float recoveryMax = targetSacrificeEffects != null
+			? targetSacrificeEffects.MissRecoveryMax
+			: missRecoveryMax;
+		float min = Mathf.Min(recoveryMin, recoveryMax);
+		float max = Mathf.Max(recoveryMin, recoveryMax);
+		yield return new WaitForSeconds(Random.Range(min, max));
+
+		isAttackRecovering = false;
+		if (currentState == MonsterState.Chase && agent != null && agent.enabled && agent.isOnNavMesh)
+			agent.isStopped = false;
+	}
+
+	public void ResumeAfterFaustSelection()
+	{
+		if (agent != null && agent.enabled && agent.isOnNavMesh &&
+			currentState != MonsterState.Stagger &&
+			currentState != MonsterState.Stunned &&
+			currentState != MonsterState.Kill)
+		{
+			agent.isStopped = false;
+		}
 	}
 
 	private void KillPlayer()
@@ -455,6 +543,13 @@ public class MonsterAI : MonoBehaviour, IDamageable
 		}
 
 		FlashRed();
+		AudioManager.Instance?.PlayRandomSfxAt(
+			transform.position,
+			SoundId.MonsterHurt1,
+			SoundId.MonsterHurt2,
+			SoundId.MonsterHurt3,
+			SoundId.MonsterHurt4
+		);
 
 		currentStaggerHP -= staggerDamage;
 		currentStaggerHP = Mathf.Max(0f, currentStaggerHP);

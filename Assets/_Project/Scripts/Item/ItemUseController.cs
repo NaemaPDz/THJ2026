@@ -10,6 +10,8 @@ public class ItemUseController : MonoBehaviour
 	[SerializeField] private RangeAttack rangeAttack;
 	[SerializeField, Min(0f)] private float keyUseRange = 1f;
 	[SerializeField, Min(0f)] private float keyUseHearingRadius = 5f;
+	private SacrificeEffectReceiver sacrificeEffects;
+	private DocumentReaderUI documentReader;
 
 	private void Awake()
 	{
@@ -17,6 +19,10 @@ public class ItemUseController : MonoBehaviour
 			equipment = GetComponent<EquipmentSystem>();
 		if (inventory == null)
 			inventory = GetComponent<InventorySystem>();
+		sacrificeEffects = GetComponent<SacrificeEffectReceiver>();
+		documentReader = GetComponent<DocumentReaderUI>();
+		if (documentReader == null)
+			documentReader = gameObject.AddComponent<DocumentReaderUI>();
 
 		if (equipment == null)
 		{
@@ -29,7 +35,15 @@ public class ItemUseController : MonoBehaviour
 
 	private void Update()
 	{
-		if (equipment == null)
+		if (documentReader != null && documentReader.IsOpen)
+		{
+			if (InputSystem.actions["UseItem"].WasPressedThisFrame() ||
+				InputSystem.actions["Cancel"].WasPressedThisFrame())
+				documentReader.Close();
+			return;
+		}
+
+		if (!FaustRunState.GameplayActive || equipment == null)
 			return;
 
 		if (InputSystem.actions["UseItem"].WasPressedThisFrame())
@@ -56,47 +70,59 @@ public class ItemUseController : MonoBehaviour
 
 		if (item.Data is KeyData key)
 		{
-			UseKey(key, item);
+			if (UseKey(key, item))
+				PlayUseSound(item.Data);
 			return;
 		}
 
+		if (item.Data is DocData document)
+		{
+			documentReader?.Open(document);
+			return;
+		}
+
+		PlayUseSound(item.Data);
 		Debug.Log($"[ItemUse] ใช้ไอเทม: {item.Data.itemName}");
 	}
 
-	private void UseKey(KeyData key, ItemInstance item)
+	private bool UseKey(KeyData key, ItemInstance item)
 	{
-		SoundEmitter.EmitSound(transform.position, keyUseHearingRadius);
+		SoundEmitter.EmitSound(
+			transform.position,
+			GetAdjustedHearingRadius(keyUseHearingRadius)
+		);
 
 		KeyDoor door = FindNearestDoor();
 		if (door == null)
 		{
 			Debug.Log("[Key] ใช้กุญแจไม่ได้: ไม่มีประตูอยู่ใกล้พอ", this);
-			return;
+			return false;
 		}
 
 		if (!door.CanOpenWith(key))
 		{
 			Debug.Log("[Key] ใช้กุญแจไม่ได้: กุญแจไม่ตรงกับประตู", this);
-			return;
+			return false;
 		}
 
 		int slotIndex = equipment.EquippedSlotIndex;
 		if (inventory == null || inventory.GetItem(slotIndex) != item)
 		{
 			Debug.LogWarning("[Key] ใช้กุญแจไม่ได้: สถานะ Inventory ไม่ตรงกับ Equipment", this);
-			return;
+			return false;
 		}
 
 		ItemInstance consumedItem = inventory.RemoveItem(slotIndex);
 		if (consumedItem != item)
 		{
 			Debug.LogError("[Key] ใช้กุญแจไม่ได้: นำกุญแจออกจาก Inventory ไม่สำเร็จ", this);
-			return;
+			return false;
 		}
 
 		equipment.ClearEquipment();
 		door.Open();
 		Debug.Log($"[Key] ใช้ {key.itemName} เปิดประตูสำเร็จ", this);
+		return true;
 	}
 
 	private KeyDoor FindNearestDoor()
@@ -127,23 +153,36 @@ public class ItemUseController : MonoBehaviour
 		if (weapon == null)
 			return;
 
-		SoundEmitter.EmitSound(transform.position, 5f);
+		SoundEmitter.EmitSound(transform.position, GetAdjustedHearingRadius(5f));
 
 		if (weapon.WeaponData.attackType == AttackType.Melee)
 		{
-			if (meleeAttack != null)
-				meleeAttack.TryAttack(weapon, GetAimDirection());
+			if (meleeAttack != null && meleeAttack.TryAttack(weapon, GetAimDirection()))
+				PlayUseSound(weapon.WeaponData);
 
 			return;
 		}
 
 		if (weapon.WeaponData.attackType == AttackType.Projectile)
 		{
-			if (rangeAttack != null)
-				rangeAttack.TryAttack(weapon, GetAimDirection());
+			if (rangeAttack != null && rangeAttack.TryAttack(weapon, GetAimDirection()))
+				PlayUseSound(weapon.WeaponData);
 
 			return;
 		}
+	}
+
+	private float GetAdjustedHearingRadius(float baseRadius)
+	{
+		return baseRadius * (sacrificeEffects != null
+			? sacrificeEffects.SoundEmitterRadiusMultiplier
+			: 1f);
+	}
+
+	private void PlayUseSound(ItemData itemData)
+	{
+		if (itemData != null)
+			AudioManager.Instance?.PlaySfxAt(itemData.useSound, transform.position);
 	}
 
 	private Vector2 GetAimDirection()

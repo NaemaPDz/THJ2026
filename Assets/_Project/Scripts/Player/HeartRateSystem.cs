@@ -17,10 +17,13 @@ public class HeartRateSystem : MonoBehaviour
 	public bool CanSprint { get; private set; } = true;
 
 	private float recoveryTimer;
+	private float heartbeatTimer;
+	private bool wasStressed;
 
 	private void Awake()
 	{
 		CurrentBPM = restingBPM;
+		heartbeatTimer = 60f / Mathf.Max(1f, restingBPM);
 	}
 
 	public bool Tick(bool wantsSprint, float deltaTime)
@@ -65,6 +68,20 @@ public class HeartRateSystem : MonoBehaviour
 				CanSprint = true;
 			}
 		}
+
+		heartbeatTimer -= deltaTime;
+		if (heartbeatTimer <= 0f)
+		{
+			float bpmProgress = Mathf.InverseLerp(restingBPM, maxBPM, CurrentBPM);
+			float heartbeatVolume = Mathf.Lerp(0.1f, 1f, bpmProgress);
+			AudioManager.Instance?.PlaySfx2D(SoundId.UiHeartbeat, heartbeatVolume);
+			heartbeatTimer = 60f / Mathf.Max(1f, CurrentBPM);
+		}
+
+		bool isStressed = CurrentBPM >= recoverBPM;
+		if (isStressed && !wasStressed)
+			AudioManager.Instance?.PlaySfx2D(SoundId.PlayerStress);
+		wasStressed = isStressed;
 
 		return wantsSprint && CanSprint;
 	}

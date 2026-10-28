@@ -25,7 +25,7 @@ public class HotbarController : MonoBehaviour
 
 	private void Update()
 	{
-		if (equipment == null || inventory == null)
+		if (!FaustRunState.GameplayActive || equipment == null || inventory == null)
 			return;
 
 		if (InputSystem.actions["Slot1"].WasPressedThisFrame())

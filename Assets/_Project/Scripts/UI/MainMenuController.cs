@@ -1,6 +1,7 @@
 using TMPro;
 using UnityEngine;
 using UnityEngine.Audio;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
@@ -39,6 +40,7 @@ public sealed class MainMenuController : MonoBehaviour
 	private int masterVolume = MaximumVolume;
 	private int sfxVolume = MaximumVolume;
 	private int bgmVolume = MaximumVolume;
+	private GameObject lastSelectedObject;
 
 	private void Awake()
 	{
@@ -60,8 +62,8 @@ public sealed class MainMenuController : MonoBehaviour
 		AddListener(optionsButton, ShowOptions);
 		AddListener(loadButton, ShowLoadPanel);
 		AddListener(quitButton, QuitGame);
-		AddListener(optionsBackButton, ShowMainMenu);
-		AddListener(loadBackButton, ShowMainMenu);
+		AddListener(optionsBackButton, ReturnToMainMenu);
+		AddListener(loadBackButton, ReturnToMainMenu);
 		AddListener(masterMinusButton, DecreaseMasterVolume);
 		AddListener(masterPlusButton, IncreaseMasterVolume);
 		AddListener(sfxMinusButton, DecreaseSfxVolume);
@@ -72,9 +74,23 @@ public sealed class MainMenuController : MonoBehaviour
 
 	private void Start()
 	{
+		PlayUiSelectForCurrentSelection();
 		ApplyMixerVolume(MasterMixerParameter, masterVolume);
 		ApplyMixerVolume(SfxMixerParameter, sfxVolume);
 		ApplyMixerVolume(BgmMixerParameter, bgmVolume);
+	}
+
+	private void Update()
+	{
+		GameObject selectedObject = EventSystem.current != null
+			? EventSystem.current.currentSelectedGameObject
+			: null;
+
+		if (selectedObject == lastSelectedObject)
+			return;
+
+		lastSelectedObject = selectedObject;
+		PlayUiSelectForCurrentSelection();
 	}
 
 	private void OnDisable()
@@ -83,8 +99,8 @@ public sealed class MainMenuController : MonoBehaviour
 		RemoveListener(optionsButton, ShowOptions);
 		RemoveListener(loadButton, ShowLoadPanel);
 		RemoveListener(quitButton, QuitGame);
-		RemoveListener(optionsBackButton, ShowMainMenu);
-		RemoveListener(loadBackButton, ShowMainMenu);
+		RemoveListener(optionsBackButton, ReturnToMainMenu);
+		RemoveListener(loadBackButton, ReturnToMainMenu);
 		RemoveListener(masterMinusButton, DecreaseMasterVolume);
 		RemoveListener(masterPlusButton, IncreaseMasterVolume);
 		RemoveListener(sfxMinusButton, DecreaseSfxVolume);
@@ -102,6 +118,7 @@ public sealed class MainMenuController : MonoBehaviour
 
 	private void ShowOptions()
 	{
+		AudioManager.Instance?.PlaySfx2D(SoundId.UiButtonConfirm);
 		SetPanelActive(mainPanel, false);
 		SetPanelActive(optionPanel, true);
 		SetPanelActive(loadPanel, false);
@@ -109,9 +126,16 @@ public sealed class MainMenuController : MonoBehaviour
 
 	private void ShowLoadPanel()
 	{
+		AudioManager.Instance?.PlaySfx2D(SoundId.UiButtonConfirm);
 		SetPanelActive(mainPanel, false);
 		SetPanelActive(optionPanel, false);
 		SetPanelActive(loadPanel, true);
+	}
+
+	private void ReturnToMainMenu()
+	{
+		AudioManager.Instance?.PlaySfx2D(SoundId.UiButtonBack);
+		ShowMainMenu();
 	}
 
 	private void StartGame()
@@ -122,11 +146,20 @@ public sealed class MainMenuController : MonoBehaviour
 			return;
 		}
 
+		AudioManager.Instance?.PlaySfx2D(SoundId.UiStartGame);
+		FaustRunState.BeginNewRun();
 		SceneManager.LoadScene(Stage1SceneName);
+	}
+
+	private void PlayUiSelectForCurrentSelection()
+	{
+		if (lastSelectedObject != null && lastSelectedObject.GetComponent<Button>() != null)
+			AudioManager.Instance?.PlaySfx2D(SoundId.UiButtonSelect);
 	}
 
 	private void QuitGame()
 	{
+		AudioManager.Instance?.PlaySfx2D(SoundId.UiButtonConfirm);
 #if UNITY_EDITOR
 		Debug.Log("[MainMenu] Quit requested. Application.Quit() is ignored in the Unity Editor.", this);
 #endif
@@ -142,6 +175,10 @@ public sealed class MainMenuController : MonoBehaviour
 
 	private void ChangeVolume(ref int currentValue, int adjustment, string preferenceKey, string mixerParameter, TMP_Text valueText)
 	{
+		AudioManager.Instance?.PlaySfx2D(
+			adjustment > 0 ? SoundId.UiButtonConfirm : SoundId.UiButtonBack
+		);
+
 		currentValue = Mathf.Clamp(currentValue + adjustment, MinimumVolume, MaximumVolume);
 		PlayerPrefs.SetInt(preferenceKey, currentValue);
 		PlayerPrefs.Save();
@@ -166,6 +203,12 @@ public sealed class MainMenuController : MonoBehaviour
 
 		float normalizedLevel = (level - MinimumVolume) / (float)(MaximumVolume - MinimumVolume);
 		float decibels = Mathf.Lerp(-40f, 0f, normalizedLevel);
+		if (parameterName == SfxMixerParameter && AudioManager.Instance != null)
+		{
+			AudioManager.Instance.SetBaseSfxVolumeDb(decibels);
+			return;
+		}
+
 		if (!mainMixer.SetFloat(parameterName, decibels))
 			Debug.LogError($"[MainMenu] ไม่พบ Exposed AudioMixer parameter '{parameterName}'", this);
 	}

@@ -1,15 +1,75 @@
+using System;
 using UnityEngine;
+using UnityEngine.Audio;
+using UnityEngine.SceneManagement;
 
-/// <summary>
-/// Central place for playing authored audio clips. Add this component to one
-/// object in the first scene (for example, the Main Menu); it persists across scenes.
-/// </summary>
+public enum SoundId
+{
+	WorldAlert,
+	UiStartGame,
+	UiHeartbeat,
+	UiButtonSelect,
+	UiButtonConfirm,
+	UiButtonBack,
+	PlayerTalk,
+	PlayerStress,
+	PlayerShootTaser,
+	PlayerShootGun,
+	PlayerLockerOpen,
+	PlayerLockerClose,
+	PlayerItemGet,
+	PlayerInteract,
+	PlayerHurt2,
+	PlayerHurt1,
+	PlayerFootstep4,
+	PlayerFootstep3,
+	PlayerFootstep2,
+	PlayerFootstep1,
+	PlayerDeath,
+	PlayerComputerStartLoopEnd,
+	PlayerComputerStart,
+	PlayerComputerKeyboard,
+	MonsterHurt4,
+	MonsterHurt3,
+	MonsterHurt2,
+	MonsterHurt1,
+	MonsterAttack4,
+	MonsterAttack3,
+	MonsterAttack2,
+	MonsterAttack1,
+	MonsterAlert3,
+	MonsterAlert2,
+	MonsterAlert1
+}
+
+public enum MusicId
+{
+	MainMenuAmbient,
+	TapeLayerStart,
+	TapeLayerLoopEnd
+}
+
+/// <summary>Central playback point for all authored game audio.</summary>
 public sealed class AudioManager : MonoBehaviour
 {
+	private const int DefaultSfxVoiceCount = 16;
+	private const string SfxGroupName = "SFX";
+	private const string BgmGroupName = "BGM";
+
 	public static AudioManager Instance { get; private set; }
 
-	[SerializeField] private AudioSource musicSource;
-	[SerializeField] private AudioSource sfxSource;
+	[SerializeField] private AudioMixer mixer;
+	[SerializeField] private AudioClip[] sfxClips = new AudioClip[Enum.GetValues(typeof(SoundId)).Length];
+	[SerializeField] private AudioClip[] musicClips = new AudioClip[Enum.GetValues(typeof(MusicId)).Length];
+	[SerializeField, Min(1)] private int sfxVoiceCount = DefaultSfxVoiceCount;
+	[SerializeField, Range(0f, 1f)] private float spatialSfxVolume = 1f;
+
+	private AudioSource[] sfxSources;
+	private AudioSource musicSource;
+	private int nextSfxSource;
+	private int currentMusicIndex = -1;
+	private float baseSfxVolumeDb;
+	private float sfxVolumeOffsetDb;
 
 	private void Awake()
 	{
@@ -21,44 +81,59 @@ public sealed class AudioManager : MonoBehaviour
 
 		Instance = this;
 		DontDestroyOnLoad(gameObject);
-		musicSource = GetOrCreateSource(musicSource, "Music", true);
-		sfxSource = GetOrCreateSource(sfxSource, "SFX", false);
+		CreateSources();
+		SceneManager.sceneLoaded += HandleSceneLoaded;
+	}
+
+	private void Start()
+	{
+		PlayMusic(MusicId.MainMenuAmbient);
 	}
 
 	private void OnDestroy()
 	{
+		SceneManager.sceneLoaded -= HandleSceneLoaded;
 		if (Instance == this)
 			Instance = null;
 	}
 
-	/// <summary>Plays a 2D one-shot sound. Repeated calls can overlap.</summary>
-	public void PlaySfx(AudioClip clip, float volume = 1f)
+	public void PlaySfx2D(SoundId sound, float volume = 1f)
 	{
-		if (clip == null || sfxSource == null)
-			return;
-
-		sfxSource.PlayOneShot(clip, Mathf.Clamp01(volume));
+		PlaySfx(sound, transform.position, false, volume);
 	}
 
-	/// <summary>Plays a one-shot sound from a position in the world.</summary>
-	public void PlaySfxAt(AudioClip clip, Vector3 position, float volume = 1f)
+	public void PlaySfxAt(SoundId sound, Vector3 position, float volume = 1f)
 	{
-		if (clip == null)
-			return;
-
-		AudioSource.PlayClipAtPoint(clip, position, Mathf.Clamp01(volume));
+		PlaySfx(sound, position, true, volume);
 	}
 
-	/// <summary>Starts looping background music, or changes the current track.</summary>
-	public void PlayMusic(AudioClip clip, bool loop = true)
+	public void PlayRandomSfx2D(params SoundId[] sounds)
 	{
-		if (clip == null || musicSource == null)
+		if (sounds == null || sounds.Length == 0)
 			return;
 
-		if (musicSource.clip == clip && musicSource.isPlaying)
+		PlaySfx2D(sounds[UnityEngine.Random.Range(0, sounds.Length)]);
+	}
+
+	public void PlayRandomSfxAt(Vector3 position, params SoundId[] sounds)
+	{
+		if (sounds == null || sounds.Length == 0)
 			return;
 
-		musicSource.clip = clip;
+		PlaySfxAt(sounds[UnityEngine.Random.Range(0, sounds.Length)], position);
+	}
+
+	public void PlayMusic(MusicId music, bool loop = true)
+	{
+		int index = (int)music;
+		if (musicSource == null || !HasClip(musicClips, index, "music"))
+			return;
+
+		if (currentMusicIndex == index && musicSource.isPlaying)
+			return;
+
+		currentMusicIndex = index;
+		musicSource.clip = musicClips[index];
 		musicSource.loop = loop;
 		musicSource.Play();
 	}
@@ -69,18 +144,107 @@ public sealed class AudioManager : MonoBehaviour
 			musicSource.Stop();
 	}
 
-	private AudioSource GetOrCreateSource(AudioSource source, string sourceName, bool isMusic)
+	public void SetBaseSfxVolumeDb(float decibels)
 	{
-		if (source == null)
+		baseSfxVolumeDb = decibels;
+		ApplySfxVolume();
+	}
+
+	public void SetSfxVolumeOffsetDb(float decibels)
+	{
+		sfxVolumeOffsetDb = decibels;
+		ApplySfxVolume();
+	}
+
+	private void ApplySfxVolume()
+	{
+		if (mixer != null && !mixer.SetFloat("SFXVolume", baseSfxVolumeDb + sfxVolumeOffsetDb))
+			Debug.LogError("[AudioManager] Exposed AudioMixer parameter 'SFXVolume' was not found.", this);
+	}
+
+	private void PlaySfx(SoundId sound, Vector3 position, bool spatial, float volume)
+	{
+		int index = (int)sound;
+		if (!HasClip(sfxClips, index, "SFX") || sfxSources == null || sfxSources.Length == 0)
+			return;
+
+		AudioSource source = GetNextSfxSource();
+		source.transform.position = position;
+		source.spatialBlend = spatial ? 1f : 0f;
+		source.volume = Mathf.Clamp01(volume) * (spatial ? spatialSfxVolume : 1f);
+		source.clip = sfxClips[index];
+		source.Play();
+	}
+
+	private AudioSource GetNextSfxSource()
+	{
+		AudioSource source = sfxSources[nextSfxSource];
+		nextSfxSource = (nextSfxSource + 1) % sfxSources.Length;
+		return source;
+	}
+
+	private void CreateSources()
+	{
+		AudioMixerGroup sfxGroup = FindMixerGroup(SfxGroupName);
+		AudioMixerGroup bgmGroup = FindMixerGroup(BgmGroupName);
+		sfxSources = new AudioSource[Mathf.Max(1, sfxVoiceCount)];
+
+		for (int i = 0; i < sfxSources.Length; i++)
 		{
-			GameObject sourceObject = new GameObject(sourceName);
-			sourceObject.transform.SetParent(transform, false);
-			source = sourceObject.AddComponent<AudioSource>();
+			sfxSources[i] = CreateSource($"SFX Voice {i + 1}", sfxGroup);
+			sfxSources[i].spatialBlend = 0f;
+			// Each one-shot uses a free voice; this assignment is reset before playback.
+			sfxSources[i].playOnAwake = false;
 		}
 
+		musicSource = CreateSource("Music", bgmGroup);
+		musicSource.spatialBlend = 0f;
+	}
+
+	private AudioSource CreateSource(string sourceName, AudioMixerGroup outputGroup)
+	{
+		GameObject sourceObject = new GameObject(sourceName);
+		sourceObject.transform.SetParent(transform, false);
+		AudioSource source = sourceObject.AddComponent<AudioSource>();
 		source.playOnAwake = false;
-		source.spatialBlend = 0f;
-		source.loop = isMusic;
+		source.outputAudioMixerGroup = outputGroup;
 		return source;
+	}
+
+	private AudioMixerGroup FindMixerGroup(string groupName)
+	{
+		if (mixer == null)
+		{
+			Debug.LogError("[AudioManager] Main AudioMixer is not assigned.", this);
+			return null;
+		}
+
+		AudioMixerGroup[] groups = mixer.FindMatchingGroups(groupName);
+		if (groups.Length == 0)
+		{
+			Debug.LogError($"[AudioManager] Mixer group '{groupName}' was not found.", this);
+			return null;
+		}
+
+		return groups[0];
+	}
+
+	private bool HasClip(AudioClip[] clips, int index, string category)
+	{
+		if (clips != null && index >= 0 && index < clips.Length && clips[index] != null)
+			return true;
+
+		Debug.LogWarning($"[AudioManager] Missing {category} clip at catalog index {index}.", this);
+		return false;
+	}
+
+	private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+	{
+		if (scene.name == "MainMenu")
+			PlayMusic(MusicId.MainMenuAmbient);
+		else if (scene.name == "Stage1")
+			PlayMusic(MusicId.TapeLayerStart);
+		else if (scene.name == "Stage2" || scene.name == "Stage3")
+			PlayMusic(MusicId.TapeLayerLoopEnd);
 	}
 }

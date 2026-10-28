@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 7425193496101033712}
   - component: {fileID: 2895675947987570331}
   m_Layer: 9
-  m_Name: WorldItem_KeyS1
+  m_Name: WorldItem_Key
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -82,7 +82,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aad3d403f853cbe49900b48f48aef50c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::WorldItem
-  itemData: {fileID: 11400000, guid: c6c3daaf2e526f8d9b01c9f5037d6c23, type: 2}
+  itemData: {fileID: 0}
 --- !u!1 &8354207026258378911
 GameObject:
   m_ObjectHideFlags: 0

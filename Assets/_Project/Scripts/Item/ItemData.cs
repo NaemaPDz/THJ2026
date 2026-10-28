@@ -14,4 +14,5 @@ public class ItemData : ScriptableObject
 	[Header("Visuals")]
 	public Sprite icon;
 	public GameObject worldPrefab;
+	public SoundId useSound;
 }

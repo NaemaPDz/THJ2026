@@ -29,6 +29,9 @@ public class MonsterVision : MonoBehaviour
 
 	private void Update()
 	{
+		if (!FaustRunState.GameplayActive)
+			return;
+
 		UpdateFacingDirection();
 
 		visionTimer -= Time.deltaTime;

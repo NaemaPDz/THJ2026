@@ -26,7 +26,7 @@ public class ItemPickupHandler : MonoBehaviour
 
 	private void Update()
 	{
-		if (inventory == null)
+		if (!FaustRunState.GameplayActive || inventory == null)
 			return;
 
 		if (InputSystem.actions["Interact"].WasPressedThisFrame())
@@ -54,6 +54,7 @@ public class ItemPickupHandler : MonoBehaviour
 
 			if (inventory.TryAddItem(worldItem.Item))
 			{
+				AudioManager.Instance?.PlaySfxAt(SoundId.PlayerItemGet, transform.position);
 				Debug.Log(
 					$"[Pickup] เก็บ {worldItem.Item.Data.itemName} สำเร็จ",
 					this

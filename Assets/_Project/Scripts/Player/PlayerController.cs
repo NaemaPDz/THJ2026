@@ -8,6 +8,12 @@ public class PlayerController : MonoBehaviour
 	[Header("Movement")]
 	public float walkSpeed = 3f;
 	public float sprintSpeed = 5f;
+	[SerializeField, Min(0f)] private float walkAcceleration = 16f;
+	[SerializeField, Min(0f)] private float sprintAcceleration = 20f;
+	[SerializeField, Min(0f)] private float walkDeceleration = 24f;
+	[SerializeField, Min(0f)] private float sprintDeceleration = 28f;
+	[SerializeField, Min(0f)] private float walkFootstepHearingRadius = 2f;
+	[SerializeField, Min(0f)] private float sprintFootstepHearingRadius = 5f;
 
 	private const string Stage1SceneName = "Stage1";
 	private const string DeathCutsceneRootName = "MC_DEAD_SCENE";
@@ -19,16 +25,27 @@ public class PlayerController : MonoBehaviour
 	private Rigidbody2D rb;
 	private HeartRateSystem heartRate;
 	private Animator animator;
+	private SacrificeEffectReceiver sacrificeEffects;
 
 	private Vector2 moveInput;
+	private Vector2 currentVelocity;
 	private bool sprintHeld;
 	private bool isDead;
+	private float footstepTimer;
+	private static readonly SoundId[] FootstepSounds =
+	{
+		SoundId.PlayerFootstep1,
+		SoundId.PlayerFootstep2,
+		SoundId.PlayerFootstep3,
+		SoundId.PlayerFootstep4
+	};
 
 	private void Awake()
 	{
 		rb = GetComponent<Rigidbody2D>();
 		heartRate = GetComponent<HeartRateSystem>();
 		animator = GetComponentInChildren<Animator>();
+		sacrificeEffects = GetComponent<SacrificeEffectReceiver>();
 
 		rb.gravityScale = 0f;
 		rb.freezeRotation = true;
@@ -36,18 +53,23 @@ public class PlayerController : MonoBehaviour
 
 	private void Update()
 	{
-		if (isDead)
+		if (isDead || !FaustRunState.GameplayActive)
+		{
+			moveInput = Vector2.zero;
+			sprintHeld = false;
 			return;
+		}
 
 		Vector2 moveDir = InputSystem.actions["Move"].ReadValue<Vector2>();
 		moveInput = moveDir.normalized;
 
-		sprintHeld = InputSystem.actions["Sprint"].IsPressed();
+		sprintHeld = InputSystem.actions["Sprint"].IsPressed() &&
+			(sacrificeEffects == null || !sacrificeEffects.SprintDisabled);
 	}
 
 	private void FixedUpdate()
 	{
-		if (isDead)
+		if (isDead || !FaustRunState.GameplayActive)
 			return;
 
 		bool wantsSprint =
@@ -59,15 +81,55 @@ public class PlayerController : MonoBehaviour
 		);
 
 		float speed = isSprinting ? sprintSpeed : walkSpeed;
+		float acceleration = isSprinting ? sprintAcceleration : walkAcceleration;
+		float deceleration = isSprinting ? sprintDeceleration : walkDeceleration;
+		if (sacrificeEffects != null)
+		{
+			acceleration *= sacrificeEffects.AccelerationMultiplier;
+			deceleration *= sacrificeEffects.DecelerationMultiplier;
+		}
 
-		rb.MovePosition(
-			rb.position + moveInput * speed * Time.fixedDeltaTime
+		Vector2 targetVelocity = moveInput * speed;
+		float responseRate = moveInput.sqrMagnitude > 0f ? acceleration : deceleration;
+		currentVelocity = Vector2.MoveTowards(
+			currentVelocity,
+			targetVelocity,
+			responseRate * Time.fixedDeltaTime
 		);
 
-		animator.SetFloat("Speed", moveInput.sqrMagnitude * speed);
+		rb.MovePosition(
+			rb.position + currentVelocity * Time.fixedDeltaTime
+		);
+
+		bool isMoving = currentVelocity.sqrMagnitude > 0.01f;
+		if (isMoving)
+		{
+			footstepTimer -= Time.fixedDeltaTime;
+			if (footstepTimer <= 0f)
+			{
+				AudioManager.Instance?.PlayRandomSfxAt(
+					transform.position,
+					FootstepSounds
+				);
+				float footstepHearingRadius = isSprinting
+					? sprintFootstepHearingRadius
+					: walkFootstepHearingRadius;
+				SoundEmitter.EmitSound(
+					transform.position,
+					footstepHearingRadius * GetSoundEmitterRadiusMultiplier()
+				);
+				footstepTimer = isSprinting ? 0.3f : 0.45f;
+			}
+		}
+		else
+		{
+			footstepTimer = 0f;
+		}
+
+		animator.SetFloat("Speed", currentVelocity.magnitude);
 		animator.SetBool("Sprint", isSprinting);
 
-		if (moveInput.sqrMagnitude > 0f)
+		if (isMoving)
 		{
 			if (moveInput.x < 0f)
 			{
@@ -80,12 +142,33 @@ public class PlayerController : MonoBehaviour
 		}
 	}
 
+	private float GetSoundEmitterRadiusMultiplier()
+	{
+		return sacrificeEffects != null
+			? sacrificeEffects.SoundEmitterRadiusMultiplier
+			: 1f;
+	}
+
+	public void PlayHurt()
+	{
+		if (isDead)
+			return;
+
+		animator?.SetTrigger("Hurt");
+		AudioManager.Instance?.PlayRandomSfxAt(
+			transform.position,
+			SoundId.PlayerHurt1,
+			SoundId.PlayerHurt2
+		);
+	}
+
 	public void Death()
 	{
 		if (isDead)
 			return;
 
 		isDead = true;
+		AudioManager.Instance?.PlaySfxAt(SoundId.PlayerDeath, transform.position);
 
 		if (rb != null)
 		{
@@ -153,6 +236,7 @@ public class PlayerController : MonoBehaviour
 		}
 
 		Time.timeScale = 1f;
+		FaustRunState.BeginNewRun();
 		SceneManager.LoadScene(Stage1SceneName);
 	}
 

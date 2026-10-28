@@ -7,10 +7,12 @@ public class MeleeAttack : MonoBehaviour
 	[SerializeField] private LayerMask targetLayers;
 
 	private Animator animator;
+	private SacrificeEffectReceiver sacrificeEffects;
 
 	private void Awake()
 	{
 		animator = GetComponentInChildren<Animator>();
+		sacrificeEffects = GetComponent<SacrificeEffectReceiver>();
 	}
 
 	public bool TryAttack(WeaponInstance weapon, Vector2 aimDirection)
@@ -44,7 +46,7 @@ public class MeleeAttack : MonoBehaviour
 
 		Collider2D[] hits = Physics2D.OverlapCircleAll(
 			origin,
-			weapon.WeaponData.range,
+			weapon.WeaponData.range * GetRangeMultiplier(),
 			targetLayers
 		);
 
@@ -82,6 +84,13 @@ public class MeleeAttack : MonoBehaviour
 		);
 
 		return true;
+	}
+
+	private float GetRangeMultiplier()
+	{
+		return sacrificeEffects != null
+			? sacrificeEffects.AttackRangeMultiplier
+			: 1f;
 	}
 
 }

@@ -18,6 +18,7 @@ GameObject:
   - component: {fileID: 6399444797440640283}
   - component: {fileID: 1595487202588964267}
   - component: {fileID: 6385524519493185394}
+  - component: {fileID: 300000001}
   m_Layer: 6
   m_Name: Player
   m_TagString: Player
@@ -226,6 +227,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::RangeAttack
   projectilePrefab: {fileID: 8706679591674799753, guid: 28f0c4919d145fa46bf5da62d2484ef5, type: 3}
   firePoint: {fileID: 905125978032730050}
+--- !u!114 &300000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1279029129268356078}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3f8a97c5b27e4d3f9db163310a16f9d2, type: 3}
+  m_Name:
+  m_EditorClassIdentifier: Assembly-CSharp::SacrificeEffectReceiver
+  attackRangeMultiplier: 1
+  soundEmitterRadiusMultiplier: 1
+  accelerationMultiplier: 1
+  decelerationMultiplier: 1
+  sprintDisabled: 0
+  attackMissChance: 0
+  missRecoveryMin: 1
+  missRecoveryMax: 2
 --- !u!1 &2231631430550679192
 GameObject:
   m_ObjectHideFlags: 0

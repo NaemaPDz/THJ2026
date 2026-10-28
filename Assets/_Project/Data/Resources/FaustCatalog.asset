@@ -1,0 +1,96 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f9f66832ff2841c49692f65f4d796e11, type: 3}
+  m_Name: FaustCatalog
+  m_EditorClassIdentifier: Assembly-CSharp::FaustCatalog
+  fausts:
+  - id: 0
+    placement: 1
+    displayName: Touch
+    goodEffect: Keeps momentum while moving.
+    badEffect: Acceleration and braking are reduced.
+    icon: {fileID: 0}
+    accelerationMultiplier: 0.5
+    decelerationMultiplier: 0.5
+    attackRangeMultiplier: 1.25
+    visionAngleOffset: -15
+    sfxVolumeOffsetDb: -6
+    attackMissChance: 0.15
+    missRecoveryMin: 1
+    missRecoveryMax: 2
+    halfStrengthSprintMaxBpm: 130
+    hideHudAtFullStrength: 1
+  - id: 1
+    placement: 3
+    displayName: Eyes
+    goodEffect: Attack range increases by 25%.
+    badEffect: Vision cone narrows by 15 degrees.
+    icon: {fileID: 0}
+    accelerationMultiplier: 0.5
+    decelerationMultiplier: 0.5
+    attackRangeMultiplier: 1.25
+    visionAngleOffset: -15
+    sfxVolumeOffsetDb: -6
+    attackMissChance: 0.15
+    missRecoveryMin: 1
+    missRecoveryMax: 2
+    halfStrengthSprintMaxBpm: 130
+    hideHudAtFullStrength: 1
+  - id: 2
+    placement: 2
+    displayName: Heart
+    goodEffect: 15% chance to survive a monster grab.
+    badEffect: You can no longer sprint.
+    icon: {fileID: 0}
+    accelerationMultiplier: 0.5
+    decelerationMultiplier: 0.5
+    attackRangeMultiplier: 1.25
+    visionAngleOffset: -15
+    sfxVolumeOffsetDb: -6
+    attackMissChance: 0.15
+    missRecoveryMin: 1
+    missRecoveryMax: 2
+    halfStrengthSprintMaxBpm: 130
+    hideHudAtFullStrength: 1
+  - id: 3
+    placement: 0
+    displayName: Ears
+    goodEffect: Vision cone widens by 15 degrees.
+    badEffect: SFX volume is reduced by 6 dB.
+    icon: {fileID: 0}
+    accelerationMultiplier: 0.5
+    decelerationMultiplier: 0.5
+    attackRangeMultiplier: 1.25
+    visionAngleOffset: 15
+    sfxVolumeOffsetDb: -6
+    attackMissChance: 0.15
+    missRecoveryMin: 1
+    missRecoveryMax: 2
+    halfStrengthSprintMaxBpm: 130
+    hideHudAtFullStrength: 1
+  - id: 4
+    placement: 3
+    displayName: Voice
+    goodEffect: Player-made sounds reach monsters at half the radius.
+    badEffect: The HUD is hidden.
+    icon: {fileID: 0}
+    accelerationMultiplier: 0.5
+    decelerationMultiplier: 0.5
+    attackRangeMultiplier: 1.25
+    visionAngleOffset: -15
+    sfxVolumeOffsetDb: -6
+    attackMissChance: 0.15
+    missRecoveryMin: 1
+    missRecoveryMax: 2
+    halfStrengthSprintMaxBpm: 130
+    hideHudAtFullStrength: 1
+    soundEmitterRadiusMultiplier: 0.5

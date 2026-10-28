@@ -14,7 +14,7 @@ public class MouseLook2D : MonoBehaviour
 
 	private void Update()
 	{
-		if (Mouse.current == null || mainCamera == null)
+		if (!FaustRunState.GameplayActive || Mouse.current == null || mainCamera == null)
 			return;
 
 		Vector2 mousePosition =

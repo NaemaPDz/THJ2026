@@ -7,10 +7,12 @@ public class RangeAttack : MonoBehaviour
 	[SerializeField] private Transform firePoint;
 
 	private Animator animator;
+	private SacrificeEffectReceiver sacrificeEffects;
 
 	private void Awake()
 	{
 		animator = GetComponentInChildren<Animator>();
+		sacrificeEffects = GetComponent<SacrificeEffectReceiver>();
 	}
 
 	public bool TryAttack(WeaponInstance weapon, Vector2 aimDirection)
@@ -61,7 +63,11 @@ public class RangeAttack : MonoBehaviour
 			return false;
 		}
 
-		projectile.Initialize(weapon.WeaponData, aimDirection);
+		projectile.Initialize(
+			weapon.WeaponData,
+			aimDirection,
+			sacrificeEffects != null ? sacrificeEffects.AttackRangeMultiplier : 1f
+		);
 
 		if (!weapon.TryStartAttack())
 		{

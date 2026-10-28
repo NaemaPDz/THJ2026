@@ -7,17 +7,21 @@ public class Projectile : MonoBehaviour
 	private WeaponData weaponData;
 	private Vector2 moveDirection;
 	private float projectileSpeed;
-	private float maxLifetime = 5f;
+	private float maxTravelDistance;
+	private Vector3 startPosition;
 	private bool hasHit;
 
 	public void Initialize(
 		WeaponData data,
-		Vector2 direction
+		Vector2 direction,
+		float rangeMultiplier = 1f
 	)
 	{
 		weaponData = data;
 		moveDirection = direction.normalized;
 		projectileSpeed = data.projectileSpeed;
+		maxTravelDistance = Mathf.Max(0f, data.range * rangeMultiplier);
+		startPosition = transform.position;
 
 		// หัน Sprite ไปตามทิศทางที่ยิง
 		if (moveDirection.sqrMagnitude > 0f)
@@ -32,12 +36,16 @@ public class Projectile : MonoBehaviour
 			);
 		}
 
-		Destroy(gameObject, maxLifetime);
 	}
 
 	private void Update()
 	{
+		if (!FaustRunState.GameplayActive)
+			return;
+
 		transform.position += (Vector3)(projectileSpeed * Time.deltaTime * moveDirection);
+		if (Vector2.Distance(startPosition, transform.position) >= maxTravelDistance)
+			Destroy(gameObject);
 	}
 
 	private void OnTriggerEnter2D(Collider2D other)

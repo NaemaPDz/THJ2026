@@ -16,4 +16,5 @@ MonoBehaviour:
   itemName: Key
   description: A key for the nearby door.
   icon: {fileID: 6393625202743233467, guid: ebd5337d35ea2354a8fe7bf74fad33a8, type: 3}
-  worldPrefab: {fileID: 0}
+  worldPrefab: {fileID: 4946213056314287874, guid: 0409a839e5b0d784b812a444c956e8ef, type: 3}
+  useSound: 13

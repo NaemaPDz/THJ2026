@@ -40,6 +40,7 @@ public class FakeVisionEffect : MonoBehaviour
 
 	private Camera targetCamera;
 	private RenderTexture selectiveTexture;
+	private float visionAngleOffset;
 
 	private static readonly int PlayerPosID =
 		Shader.PropertyToID("_PlayerPos");
@@ -138,7 +139,10 @@ public class FakeVisionEffect : MonoBehaviour
 		visionMaterial.SetFloat(NearRadiusID, nearRadius);
 		visionMaterial.SetFloat(NearSoftnessID, nearSoftness);
 		visionMaterial.SetFloat(ConeLengthID, coneLength);
-		visionMaterial.SetFloat(ConeAngleID, coneAngle);
+		visionMaterial.SetFloat(
+			ConeAngleID,
+			Mathf.Clamp(coneAngle + visionAngleOffset, 10f, 160f)
+		);
 		visionMaterial.SetFloat(ConeSoftnessID, coneSoftness);
 
 		visionMaterial.SetFloat(
@@ -167,6 +171,11 @@ public class FakeVisionEffect : MonoBehaviour
 			AspectID,
 			targetCamera.aspect
 		);
+	}
+
+	public void SetVisionAngleOffset(float offset)
+	{
+		visionAngleOffset = offset;
 	}
 
 	private void SyncSelectiveCamera()
