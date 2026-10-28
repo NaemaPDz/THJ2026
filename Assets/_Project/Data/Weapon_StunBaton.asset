@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: WEA_002
   itemName: Stun Baton
   description: 
-  icon: {fileID: 3625043607559282579, guid: c4c9de453004edb4da94ea7313c954ea, type: 3}
+  icon: {fileID: -8368242942608093680, guid: cbe22acc4e74a2b4da4f427dcb666bd8, type: 3}
   worldPrefab: {fileID: 6589807486413108434, guid: 26929ccd5903e3841bb58d803f201245, type: 3}
   attackType: 0
   staggerDamage: 50

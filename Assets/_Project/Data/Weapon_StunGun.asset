@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: WEA_003
   itemName: Stun Gun
   description: 
-  icon: {fileID: 7482667652216324306, guid: dcc774422cc4a5042903cfbe99997cbb, type: 3}
+  icon: {fileID: 6879118450950661895, guid: 8f01ecee42b53674f9a9b1715c3a625d, type: 3}
   worldPrefab: {fileID: 6589807486413108434, guid: c7b97a29134be6e4a9a77cf7a3240909, type: 3}
   attackType: 1
   staggerDamage: 25

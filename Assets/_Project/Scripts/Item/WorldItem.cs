@@ -2,7 +2,15 @@ using UnityEngine;
 
 public class WorldItem : MonoBehaviour
 {
+	[SerializeField] private ItemData itemData;
+
 	public ItemInstance Item { get; private set; }
+
+	private void Awake()
+	{
+		if (Item == null && itemData != null)
+			Item = new ItemInstance(itemData);
+	}
 
 	public void Initialize(ItemInstance item)
 	{

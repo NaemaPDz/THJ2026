@@ -15,7 +15,7 @@ MonoBehaviour:
   itemId: WEA_001
   itemName: Pipe
   description: Just Bonk It !
-  icon: {fileID: -9095717837082945937, guid: daedc624a580bf4498c0b926a6aada29, type: 3}
+  icon: {fileID: 1304208510633726333, guid: 6106486c2ccfddc4db0040bdbcfb4736, type: 3}
   worldPrefab: {fileID: 6589807486413108434, guid: 4071621aed382cf47968f860a4f039db, type: 3}
   attackType: 0
   staggerDamage: 17

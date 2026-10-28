@@ -192,8 +192,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::ItemUseController
   equipment: {fileID: 2066753748830185271}
+  inventory: {fileID: 5756516855469864377}
   meleeAttack: {fileID: 1595487202588964267}
   rangeAttack: {fileID: 6385524519493185394}
+  keyUseRange: 1
+  keyUseHearingRadius: 5
 --- !u!114 &1595487202588964267
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -1,5 +1,7 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.SceneManagement;
 
 public class PlayerController : MonoBehaviour
 {
@@ -7,12 +9,20 @@ public class PlayerController : MonoBehaviour
 	public float walkSpeed = 3f;
 	public float sprintSpeed = 5f;
 
+	private const string Stage1SceneName = "Stage1";
+	private const string DeathCutsceneRootName = "MC_DEAD_SCENE";
+	private const string DeathCutsceneStateName = "CUT_MC_Dead_UI";
+	private const string DeathStateName = "Death";
+	private const float DeathAnimationWaitTimeout = 2f;
+	private const float DeathSequenceHoldDuration = 1f;
+
 	private Rigidbody2D rb;
 	private HeartRateSystem heartRate;
 	private Animator animator;
 
 	private Vector2 moveInput;
 	private bool sprintHeld;
+	private bool isDead;
 
 	private void Awake()
 	{
@@ -26,6 +36,9 @@ public class PlayerController : MonoBehaviour
 
 	private void Update()
 	{
+		if (isDead)
+			return;
+
 		Vector2 moveDir = InputSystem.actions["Move"].ReadValue<Vector2>();
 		moveInput = moveDir.normalized;
 
@@ -34,6 +47,9 @@ public class PlayerController : MonoBehaviour
 
 	private void FixedUpdate()
 	{
+		if (isDead)
+			return;
+
 		bool wantsSprint =
 		   sprintHeld && moveInput.sqrMagnitude > 0f;
 
@@ -66,7 +82,22 @@ public class PlayerController : MonoBehaviour
 
 	public void Death()
 	{
-		animator.SetBool("Death", true);
+		if (isDead)
+			return;
+
+		isDead = true;
+
+		if (rb != null)
+		{
+			rb.linearVelocity = Vector2.zero;
+			rb.constraints = RigidbodyConstraints2D.FreezeAll;
+		}
+
+		if (animator != null)
+		{
+			animator.updateMode = AnimatorUpdateMode.UnscaledTime;
+			animator.SetTrigger("Death");
+		}
 
 		foreach (MonoBehaviour script in GetComponents<MonoBehaviour>())
 		{
@@ -74,6 +105,86 @@ public class PlayerController : MonoBehaviour
 				script.enabled = false;
 		}
 
-		this.enabled = false;
+		StartCoroutine(PlayDeathCutsceneThenReturnToStage1());
+	}
+
+	private IEnumerator PlayDeathCutsceneThenReturnToStage1()
+	{
+		yield return WaitForDeathAnimation();
+		yield return new WaitForSecondsRealtime(DeathSequenceHoldDuration);
+
+		GameObject cutsceneRoot = FindDeathCutsceneRoot();
+		if (cutsceneRoot != null)
+		{
+			Animator cutsceneAnimator = cutsceneRoot.GetComponentInChildren<Animator>(true);
+			cutsceneRoot.SetActive(true);
+
+			if (cutsceneAnimator != null)
+			{
+				cutsceneAnimator.updateMode = AnimatorUpdateMode.UnscaledTime;
+				cutsceneAnimator.Play(DeathCutsceneStateName, 0, 0f);
+				cutsceneAnimator.Update(0f);
+
+				AnimatorStateInfo cutsceneState = cutsceneAnimator.GetCurrentAnimatorStateInfo(0);
+				if (cutsceneState.IsName(DeathCutsceneStateName))
+				{
+					float elapsed = 0f;
+					float timeout = cutsceneState.length + 1f;
+					while (cutsceneAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime < 1f && elapsed < timeout)
+					{
+						elapsed += Time.unscaledDeltaTime;
+						yield return null;
+					}
+					yield return new WaitForSecondsRealtime(DeathSequenceHoldDuration);
+				}
+				else
+				{
+					Debug.LogWarning($"Could not play Animator state {DeathCutsceneStateName}. Returning to {Stage1SceneName}.", cutsceneAnimator);
+				}
+			}
+			else
+			{
+				Debug.LogWarning($"{DeathCutsceneRootName} has no Animator. Returning to {Stage1SceneName} without playing the cutscene.", cutsceneRoot);
+			}
+		}
+		else
+		{
+			Debug.LogWarning($"Could not find {DeathCutsceneRootName} in the active scene. Returning to {Stage1SceneName} without playing the cutscene.", this);
+		}
+
+		Time.timeScale = 1f;
+		SceneManager.LoadScene(Stage1SceneName);
+	}
+
+	private IEnumerator WaitForDeathAnimation()
+	{
+		if (animator == null)
+			yield break;
+
+		float elapsed = 0f;
+		while (elapsed < DeathAnimationWaitTimeout)
+		{
+			AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+			if (stateInfo.IsName(DeathStateName) && stateInfo.normalizedTime >= 1f)
+				yield break;
+
+			elapsed += Time.unscaledDeltaTime;
+			yield return null;
+		}
+	}
+
+	private static GameObject FindDeathCutsceneRoot()
+	{
+		GameObject[] sceneRoots = SceneManager.GetActiveScene().GetRootGameObjects();
+		foreach (GameObject sceneRoot in sceneRoots)
+		{
+			foreach (Transform child in sceneRoot.GetComponentsInChildren<Transform>(true))
+			{
+				if (child.name == DeathCutsceneRootName)
+					return child.gameObject;
+			}
+		}
+
+		return null;
 	}
 }

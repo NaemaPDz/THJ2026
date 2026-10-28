@@ -5,13 +5,18 @@ public class ItemUseController : MonoBehaviour
 {
 	[Header("References")]
 	[SerializeField] private EquipmentSystem equipment;
+	[SerializeField] private InventorySystem inventory;
 	[SerializeField] private MeleeAttack meleeAttack;
 	[SerializeField] private RangeAttack rangeAttack;
+	[SerializeField, Min(0f)] private float keyUseRange = 1f;
+	[SerializeField, Min(0f)] private float keyUseHearingRadius = 5f;
 
 	private void Awake()
 	{
 		if (equipment == null)
 			equipment = GetComponent<EquipmentSystem>();
+		if (inventory == null)
+			inventory = GetComponent<InventorySystem>();
 
 		if (equipment == null)
 		{
@@ -49,7 +54,72 @@ public class ItemUseController : MonoBehaviour
 			return;
 		}
 
+		if (item.Data is KeyData key)
+		{
+			UseKey(key, item);
+			return;
+		}
+
 		Debug.Log($"[ItemUse] ใช้ไอเทม: {item.Data.itemName}");
+	}
+
+	private void UseKey(KeyData key, ItemInstance item)
+	{
+		SoundEmitter.EmitSound(transform.position, keyUseHearingRadius);
+
+		KeyDoor door = FindNearestDoor();
+		if (door == null)
+		{
+			Debug.Log("[Key] ใช้กุญแจไม่ได้: ไม่มีประตูอยู่ใกล้พอ", this);
+			return;
+		}
+
+		if (!door.CanOpenWith(key))
+		{
+			Debug.Log("[Key] ใช้กุญแจไม่ได้: กุญแจไม่ตรงกับประตู", this);
+			return;
+		}
+
+		int slotIndex = equipment.EquippedSlotIndex;
+		if (inventory == null || inventory.GetItem(slotIndex) != item)
+		{
+			Debug.LogWarning("[Key] ใช้กุญแจไม่ได้: สถานะ Inventory ไม่ตรงกับ Equipment", this);
+			return;
+		}
+
+		ItemInstance consumedItem = inventory.RemoveItem(slotIndex);
+		if (consumedItem != item)
+		{
+			Debug.LogError("[Key] ใช้กุญแจไม่ได้: นำกุญแจออกจาก Inventory ไม่สำเร็จ", this);
+			return;
+		}
+
+		equipment.ClearEquipment();
+		door.Open();
+		Debug.Log($"[Key] ใช้ {key.itemName} เปิดประตูสำเร็จ", this);
+	}
+
+	private KeyDoor FindNearestDoor()
+	{
+		Collider2D[] hits = Physics2D.OverlapCircleAll(transform.position, keyUseRange);
+		KeyDoor nearestDoor = null;
+		float nearestDistance = float.MaxValue;
+
+		foreach (Collider2D hit in hits)
+		{
+			KeyDoor door = hit.GetComponentInParent<KeyDoor>();
+			if (door == null)
+				continue;
+
+			float distance = Vector2.Distance(transform.position, door.transform.position);
+			if (distance >= nearestDistance)
+				continue;
+
+			nearestDistance = distance;
+			nearestDoor = door;
+		}
+
+		return nearestDoor;
 	}
 
 	private void UseWeapon(WeaponInstance weapon)
