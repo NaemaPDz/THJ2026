@@ -670,13 +670,6 @@ public class MonsterAI : MonoBehaviour, IDamageable
 		}
 
 		FlashRed();
-		AudioManager.Instance?.PlayRandomSfxAt(
-			transform.position,
-			SoundId.MonsterHurt1,
-			SoundId.MonsterHurt2,
-			SoundId.MonsterHurt3,
-			SoundId.MonsterHurt4
-		);
 
 		currentStaggerHP -= staggerDamage;
 		currentStaggerHP = Mathf.Max(0f, currentStaggerHP);
@@ -688,9 +681,18 @@ public class MonsterAI : MonoBehaviour, IDamageable
 
 		if (currentStaggerHP <= 0f)
 		{
+			AudioManager.Instance?.PlaySfxAt(SoundId.MonsterStaggered, transform.position);
 			ApplyStagger();
 			return;
 		}
+
+		AudioManager.Instance?.PlayRandomSfxAt(
+			transform.position,
+			SoundId.MonsterHurt1,
+			SoundId.MonsterHurt2,
+			SoundId.MonsterHurt3,
+			SoundId.MonsterHurt4
+		);
 
 		if (slowDuration > 0f)
 		{

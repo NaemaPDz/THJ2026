@@ -119,6 +119,7 @@ public class HotbarController : MonoBehaviour
 			return;
 		}
 
+		AudioManager.Instance?.PlaySfxAt(SoundId.PlayerDropItem, dropPosition);
 		Debug.Log($"[Drop] ทิ้ง {item.Data.itemName} สำเร็จ");
 	}
 

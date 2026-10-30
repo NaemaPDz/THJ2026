@@ -113,7 +113,7 @@ public class HeartRateSystem : MonoBehaviour
 		if (heartbeatTimer <= 0f)
 		{
 			float bpmProgress = Mathf.InverseLerp(restingBPM, maxBPM, CurrentBPM);
-			float heartbeatVolume = Mathf.Lerp(0.1f, 1f, bpmProgress);
+			float heartbeatVolume = Mathf.Lerp(0.1f, 1f, bpmProgress) * 0.5f;
 			AudioManager.Instance?.PlaySfx2D(SoundId.UiHeartbeat, heartbeatVolume);
 			heartbeatTimer = 60f / Mathf.Max(1f, CurrentBPM);
 		}

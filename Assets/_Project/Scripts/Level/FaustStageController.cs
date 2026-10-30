@@ -20,7 +20,6 @@ public sealed class FaustStageController : MonoBehaviour
 	private FaustCatalog catalog;
 	private Transform panelRoot;
 	private Transform faustIconRoot;
-	private Transform documentReaderRoot;
 	private readonly Dictionary<FaustId, GameObject> sacrificeIcons = new();
 	private readonly List<ChoiceCard> cards = new();
 	private readonly List<FaustDefinition> currentOffers = new();
@@ -34,7 +33,6 @@ public sealed class FaustStageController : MonoBehaviour
 		currentStage = GetStageNumber(SceneManager.GetActiveScene().name);
 		panelRoot = transform.Find("FausePanel");
 		BindFaustIcons();
-		documentReaderRoot = transform.Find("DocumentReader");
 		if (panelRoot == null)
 			Debug.LogError("[Faust] FausePanel must be a child of the stage Canvas.", this);
 		BindPanel();
@@ -235,7 +233,7 @@ public sealed class FaustStageController : MonoBehaviour
 			{
 				foreach (Transform child in hudCanvas.transform)
 				{
-					bool keepChild = child == faustIconRoot || child == documentReaderRoot ||
+					bool keepChild = child == faustIconRoot ||
 						(keepSelectionPanelVisible && child == panelRoot);
 					child.gameObject.SetActive(keepChild);
 				}

@@ -41,36 +41,48 @@ public sealed class EndingCutsceneController : MonoBehaviour
 
 		Transform nameEnterTransform = FindInActiveScene("NameEnter");
 		Transform cutsceneTransform = FindInActiveScene("CutScene");
-		Transform confirmTransform = nameEnterTransform != null
-			? nameEnterTransform.Find("ConfirmButton")
-			: null;
-		Transform inputTransform = nameEnterTransform != null
-			? nameEnterTransform.Find("InputField (TMP)")
-			: null;
-
-		if (nameEnterTransform == null || cutsceneTransform == null ||
-			confirmTransform == null || inputTransform == null)
+		if (cutsceneTransform == null)
 		{
-			Debug.LogError("[Ending] NameEnter, ConfirmButton, InputField (TMP), and CutScene are required.", this);
+			Debug.LogError("[Ending] CutScene is required.", this);
 			enabled = false;
 			return;
 		}
 
-		nameEnter = nameEnterTransform.gameObject;
 		cutsceneRoot = cutsceneTransform.gameObject;
-		confirmButton = confirmTransform.GetComponent<Button>();
-		nameInput = inputTransform.GetComponent<TMP_InputField>();
 		cutsceneAnimator = cutsceneTransform.GetComponent<Animator>();
 
-		if (confirmButton == null || nameInput == null || cutsceneAnimator == null)
+		if (cutsceneAnimator == null)
 		{
-			Debug.LogError("[Ending] ConfirmButton, InputField (TMP), or CutScene Animator is missing its component.", this);
+			Debug.LogError("[Ending] CutScene Animator is missing.", this);
 			enabled = false;
 			return;
 		}
 
 		if (IsGoodEnding)
 		{
+			Transform confirmTransform = nameEnterTransform != null
+				? nameEnterTransform.Find("ConfirmButton")
+				: null;
+			Transform inputTransform = nameEnterTransform != null
+				? nameEnterTransform.Find("InputField (TMP)")
+				: null;
+			if (nameEnterTransform == null || confirmTransform == null || inputTransform == null)
+			{
+				Debug.LogError("[Ending] GoodEnding requires NameEnter, ConfirmButton, and InputField (TMP).", this);
+				enabled = false;
+				return;
+			}
+
+			nameEnter = nameEnterTransform.gameObject;
+			confirmButton = confirmTransform.GetComponent<Button>();
+			nameInput = inputTransform.GetComponent<TMP_InputField>();
+			if (confirmButton == null || nameInput == null)
+			{
+				Debug.LogError("[Ending] ConfirmButton or InputField (TMP) is missing its component.", this);
+				enabled = false;
+				return;
+			}
+
 			Transform nameTextTransform = cutsceneTransform.Find("NameText");
 			Transform dateTransform = cutsceneTransform.Find("Date");
 			playerNameText = nameTextTransform != null ? nameTextTransform.GetComponent<TMP_Text>() : null;
@@ -97,9 +109,18 @@ public sealed class EndingCutsceneController : MonoBehaviour
 			okButton.gameObject.SetActive(false);
 		}
 
-		confirmButton.onClick.AddListener(BeginEnding);
-		nameEnter.SetActive(true);
+		if (IsGoodEnding)
+		{
+			confirmButton.onClick.AddListener(BeginEnding);
+			nameEnter.SetActive(true);
+		}
 		cutsceneRoot.SetActive(false);
+	}
+
+	private void Start()
+	{
+		if (!IsGoodEnding)
+			BeginEnding();
 	}
 
 	private void OnDestroy()
@@ -116,7 +137,8 @@ public sealed class EndingCutsceneController : MonoBehaviour
 			return;
 
 		sequenceStarted = true;
-		confirmButton.interactable = false;
+		if (confirmButton != null)
+			confirmButton.interactable = false;
 
 		if (IsGoodEnding)
 		{
@@ -125,7 +147,8 @@ public sealed class EndingCutsceneController : MonoBehaviour
 			dateText.text = DateTime.Now.ToString("dd/MM/yyyy", CultureInfo.InvariantCulture);
 		}
 
-		nameEnter.SetActive(false);
+		if (nameEnter != null)
+			nameEnter.SetActive(false);
 		cutsceneRoot.SetActive(true);
 		cutsceneAnimator.updateMode = AnimatorUpdateMode.UnscaledTime;
 		cutsceneAnimator.Play(Animator.StringToHash($"Base Layer.{EndingStateName}"), 0, 0f);
@@ -182,6 +205,7 @@ public sealed class EndingCutsceneController : MonoBehaviour
 		}
 
 		returningToMenu = true;
+		AudioManager.Instance?.PlayEndingComputerEnd();
 		SceneManager.LoadScene(MainMenuSceneName);
 	}
 

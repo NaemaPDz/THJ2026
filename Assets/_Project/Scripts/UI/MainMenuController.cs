@@ -17,10 +17,14 @@ public sealed class MainMenuController : MonoBehaviour
 	private const string BgmMixerParameter = "BGMVolume";
 	private const int MinimumVolume = 1;
 	private const int MaximumVolume = 10;
+	private const string StartCutsceneStateName = "Base Layer.StartGame";
+	private const float CutsceneStateStartTimeout = 1f;
+	private const float MinimumLoadingDisplayDuration = 2f;
 
 	[SerializeField] private GameObject mainPanel;
 	[SerializeField] private GameObject optionPanel;
 	[SerializeField] private GameObject loadingPanel;
+	[SerializeField] private GameObject startCutscene;
 	[SerializeField] private Button startButton;
 	[SerializeField] private Button optionsButton;
 	[SerializeField] private Button quitButton;
@@ -40,6 +44,7 @@ public sealed class MainMenuController : MonoBehaviour
 	private int sfxVolume = MaximumVolume;
 	private int bgmVolume = MaximumVolume;
 	private GameObject lastSelectedObject;
+	private Animator startCutsceneAnimator;
 
 	private void Awake()
 	{
@@ -52,6 +57,20 @@ public sealed class MainMenuController : MonoBehaviour
 		bgmVolume = Mathf.Clamp(bgmVolume, MinimumVolume, MaximumVolume);
 
 		RefreshVolumeLabels();
+		if (startCutscene == null)
+		{
+			Transform cutsceneTransform = transform.root.Find("CutScene");
+			if (cutsceneTransform == null)
+				cutsceneTransform = FindSceneObject("CutScene");
+			if (cutsceneTransform != null)
+				startCutscene = cutsceneTransform.gameObject;
+		}
+		if (startCutscene != null)
+			startCutsceneAnimator = startCutscene.GetComponent<Animator>();
+		if (startCutscene == null || startCutsceneAnimator == null)
+			Debug.LogError("[MainMenu] CutScene with an Animator is required for Start.", this);
+		else
+			startCutscene.SetActive(false);
 		ShowMainMenu();
 	}
 
@@ -133,20 +152,86 @@ public sealed class MainMenuController : MonoBehaviour
 			return;
 		}
 
+		if (startCutscene == null || startCutsceneAnimator == null)
+			return;
+
 		StartCoroutine(StartGameCoroutine());
 	}
 
 	private IEnumerator StartGameCoroutine()
 	{
 		AudioManager.Instance?.PlaySfx2D(SoundId.UiStartGame);
-		loadingPanel.SetActive(true);
+		startButton.interactable = false;
 		mainPanel.SetActive(false);
 		optionPanel.SetActive(false);
+		loadingPanel.SetActive(false);
+		startCutscene.SetActive(true);
+		startCutsceneAnimator.Play(Animator.StringToHash(StartCutsceneStateName), 0, 0f);
 
-		yield return new WaitForSeconds(2f);
+		float elapsed = 0f;
+		AnimatorStateInfo state = startCutsceneAnimator.GetCurrentAnimatorStateInfo(0);
+		while (!state.IsName(StartCutsceneStateName) && elapsed < CutsceneStateStartTimeout)
+		{
+			elapsed += Time.unscaledDeltaTime;
+			yield return null;
+			state = startCutsceneAnimator.GetCurrentAnimatorStateInfo(0);
+		}
 
+		if (state.IsName(StartCutsceneStateName))
+		{
+			float animationTimeout = state.length + 1f;
+			elapsed = 0f;
+			while (startCutsceneAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime < 1f &&
+				elapsed < animationTimeout)
+			{
+				elapsed += Time.unscaledDeltaTime;
+				yield return null;
+			}
+		}
+		else
+		{
+			Debug.LogWarning($"[MainMenu] Animator did not enter state '{StartCutsceneStateName}'.", this);
+		}
+
+		yield return new WaitForSecondsRealtime(2f);
+
+		loadingPanel.SetActive(true);
 		FaustRunState.BeginNewRun();
-		SceneManager.LoadScene(Stage1SceneName);
+		AsyncOperation loadOperation = SceneManager.LoadSceneAsync(Stage1SceneName);
+		if (loadOperation == null)
+		{
+			Debug.LogError($"[MainMenu] Failed to start loading Scene '{Stage1SceneName}'.", this);
+			yield break;
+		}
+
+		loadOperation.allowSceneActivation = false;
+		float loadingElapsed = 0f;
+		while (loadingElapsed < MinimumLoadingDisplayDuration || loadOperation.progress < 0.9f)
+		{
+			loadingElapsed += Time.unscaledDeltaTime;
+			yield return null;
+		}
+
+		loadOperation.allowSceneActivation = true;
+		while (!loadOperation.isDone)
+			yield return null;
+	}
+
+	private static Transform FindSceneObject(string objectName)
+	{
+		UnityEngine.SceneManagement.Scene activeScene = SceneManager.GetActiveScene();
+		Transform[] sceneTransforms = FindObjectsByType<Transform>(
+			FindObjectsInactive.Include,
+			FindObjectsSortMode.None
+		);
+
+		foreach (Transform candidate in sceneTransforms)
+		{
+			if (candidate.gameObject.scene == activeScene && candidate.name == objectName)
+				return candidate;
+		}
+
+		return null;
 	}
 
 	private void PlayUiSelectForCurrentSelection()

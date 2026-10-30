@@ -74,6 +74,8 @@ public class ItemUseController : MonoBehaviour
 		{
 			if (UseKey(key, item))
 				PlayUseSound(item.Data);
+			else
+				AudioManager.Instance?.PlaySfxAt(SoundId.PlayerDoorFail, transform.position);
 			return;
 		}
 

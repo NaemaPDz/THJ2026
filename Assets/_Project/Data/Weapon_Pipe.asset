@@ -17,7 +17,7 @@ MonoBehaviour:
   description: Just Bonk It !
   icon: {fileID: 1304208510633726333, guid: 6106486c2ccfddc4db0040bdbcfb4736, type: 3}
   worldPrefab: {fileID: 6589807486413108434, guid: 4071621aed382cf47968f860a4f039db, type: 3}
-  useSound: 13
+  useSound: 39
   attackType: 0
   staggerDamage: 17
   attackCooldown: 0.5

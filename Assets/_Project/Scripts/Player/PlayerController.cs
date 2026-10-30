@@ -172,7 +172,6 @@ public class PlayerController : MonoBehaviour
 			return;
 
 		isDead = true;
-		AudioManager.Instance?.PlaySfxAt(SoundId.PlayerDeath, transform.position);
 
 		if (rb != null)
 		{
@@ -204,6 +203,11 @@ public class PlayerController : MonoBehaviour
 		if (cutsceneRoot != null)
 		{
 			cutsceneRoot.SetActive(true);
+			AudioManager.Instance?.PlayRandomSfxAt(
+				transform.position,
+				SoundId.PlayerHurt1,
+				SoundId.PlayerHurt2
+			);
 			Animator cutsceneAnimator = cutsceneRoot.GetComponentInChildren<Animator>(true);
 
 			if (cutsceneAnimator != null)

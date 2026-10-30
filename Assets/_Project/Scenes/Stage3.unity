@@ -30421,11 +30421,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1538473172513068100, guid: 0409a839e5b0d784b812a444c956e8ef, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 1.89
+      value: 3.66
       objectReference: {fileID: 0}
     - target: {fileID: 1538473172513068100, guid: 0409a839e5b0d784b812a444c956e8ef, type: 3}
       propertyPath: m_LocalPosition.y
-      value: -1.62
+      value: 7.47
       objectReference: {fileID: 0}
     - target: {fileID: 1538473172513068100, guid: 0409a839e5b0d784b812a444c956e8ef, type: 3}
       propertyPath: m_LocalPosition.z
@@ -30465,7 +30465,7 @@ PrefabInstance:
       objectReference: {fileID: 11400000, guid: c6c3daaf2e526f8d9b01c9f5037d6c23, type: 2}
     - target: {fileID: 4854323391645795691, guid: 0409a839e5b0d784b812a444c956e8ef, type: 3}
       propertyPath: m_SortingOrder
-      value: 100
+      value: 101
       objectReference: {fileID: 0}
     - target: {fileID: 4946213056314287874, guid: 0409a839e5b0d784b812a444c956e8ef, type: 3}
       propertyPath: m_Name
@@ -30550,7 +30550,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4883654950403476087, guid: 1eaad9ceba361f04d9e755b2c88b0073, type: 3}
       propertyPath: visionRange
-      value: 7
+      value: 6
       objectReference: {fileID: 0}
     - target: {fileID: 6587931513545072090, guid: 1eaad9ceba361f04d9e755b2c88b0073, type: 3}
       propertyPath: target
