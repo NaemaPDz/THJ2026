@@ -8,6 +8,7 @@ public class MonsterAI : MonoBehaviour, IDamageable
 	{
 		Patrol,
 		Investigate,
+		Alert,
 		Chase,
 		Stagger,
 		Stunned,
@@ -32,6 +33,9 @@ public class MonsterAI : MonoBehaviour, IDamageable
 	[SerializeField] private float patrolSpeed = 2f;
 	[SerializeField] private float waitAtPoint = 1f;
 
+	[Header("Chase")]
+	[SerializeField, Min(0f)] private float chaseSpeed = 4f;
+
 	[Header("Search After Losing Sight")]
 	[SerializeField] private float loseSightDelay = 0.5f;
 	[SerializeField] private float searchDuration = 3f;
@@ -50,6 +54,8 @@ public class MonsterAI : MonoBehaviour, IDamageable
 
 	private NavMeshAgent agent;
 	private MonsterVision vision;
+	private FakeVisionEffect playerVision;
+	private Animator animator;
 
 	private MonsterState currentState = MonsterState.Patrol;
 	private MonsterState previousState;
@@ -62,8 +68,10 @@ public class MonsterAI : MonoBehaviour, IDamageable
 
 	private Coroutine slowCoroutine;
 	private Coroutine staggerCoroutine;
+	private Coroutine screamCoroutine;
 	private bool isAttackRecovering;
 	private SacrificeEffectReceiver targetSacrificeEffects;
+	private HeartRateSystem targetHeartRate;
 
 	private void OnEnable()
 	{
@@ -73,12 +81,16 @@ public class MonsterAI : MonoBehaviour, IDamageable
 	private void OnDisable()
 	{
 		SoundEmitter.OnSoundMade -= HandleSoundHeard;
+		targetHeartRate?.SetMonsterThreatState(false, false);
 	}
 
 	private void Start()
 	{
 		agent = GetComponent<NavMeshAgent>();
 		vision = GetComponent<MonsterVision>();
+		playerVision = Camera.main != null
+			? Camera.main.GetComponent<FakeVisionEffect>()
+			: FindFirstObjectByType<FakeVisionEffect>();
 
 		if (vision != null)
 		{
@@ -110,6 +122,7 @@ public class MonsterAI : MonoBehaviour, IDamageable
 
 		if (spriteRenderer == null)
 			spriteRenderer = GetComponentInChildren<SpriteRenderer>();
+		animator = GetComponentInChildren<Animator>();
 
 		if (spriteRenderer != null)
 			originalColor = spriteRenderer.color;
@@ -128,13 +141,17 @@ public class MonsterAI : MonoBehaviour, IDamageable
 		if (!FaustRunState.GameplayActive)
 			return;
 
+		PublishThreatState();
+		UpdateAnimation();
+
 		if (agent == null || !agent.enabled || !agent.isOnNavMesh)
 			return;
 
 		// ระหว่าง Stagger หรือ Stunned ห้าม AI สั่งเดิน
 		if (currentState == MonsterState.Stagger ||
 			currentState == MonsterState.Stunned ||
-			currentState == MonsterState.Kill)
+			currentState == MonsterState.Kill ||
+			currentState == MonsterState.Alert)
 		{
 			return;
 		}
@@ -148,14 +165,7 @@ public class MonsterAI : MonoBehaviour, IDamageable
 				if (currentState == MonsterState.Patrol ||
 					currentState == MonsterState.Investigate)
 				{
-					AudioManager.Instance?.PlaySfxAt(SoundId.WorldAlert, transform.position);
-					AudioManager.Instance?.PlayRandomSfxAt(
-						transform.position,
-						SoundId.MonsterAlert1,
-						SoundId.MonsterAlert2,
-						SoundId.MonsterAlert3
-					);
-					Chase(target);
+					StartDetectionScream();
 				}
 
 				if (currentState == MonsterState.Chase && target != null)
@@ -175,7 +185,7 @@ public class MonsterAI : MonoBehaviour, IDamageable
 			}
 		}
 
-		if (CheckKillDistance())
+		if (currentState == MonsterState.Alert || CheckKillDistance())
 			return;
 
 		switch (currentState)
@@ -192,6 +202,85 @@ public class MonsterAI : MonoBehaviour, IDamageable
 				UpdateChase();
 				break;
 		}
+	}
+
+	private void StartDetectionScream()
+	{
+		if (screamCoroutine != null)
+			return;
+
+		AudioManager.Instance?.PlaySfxAt(SoundId.WorldAlert, transform.position);
+		AudioManager.Instance?.PlayRandomSfxAt(
+			transform.position,
+			SoundId.MonsterAlert1,
+			SoundId.MonsterAlert2,
+			SoundId.MonsterAlert3
+		);
+
+		SetState(MonsterState.Alert);
+		animator?.ResetTrigger("Detect");
+		animator?.SetTrigger("Detect");
+		screamCoroutine = StartCoroutine(ScreamThenChase());
+	}
+
+	private IEnumerator ScreamThenChase()
+	{
+		if (animator != null)
+		{
+			yield return WaitForAnimationToFinish("Base Layer.ScreamIntro");
+			yield return WaitForAnimationToFinish("Base Layer.Scream");
+		}
+
+		screamCoroutine = null;
+		if (currentState != MonsterState.Alert)
+			yield break;
+
+		if (target != null)
+			Chase(target);
+		else
+			SetState(MonsterState.Investigate);
+	}
+
+	private IEnumerator WaitForAnimationToFinish(string stateName)
+	{
+		const float timeout = 3f;
+		float elapsed = 0f;
+		bool stateStarted = false;
+
+		while (elapsed < timeout)
+		{
+			AnimatorStateInfo stateInfo = animator.GetCurrentAnimatorStateInfo(0);
+			if (stateInfo.IsName(stateName))
+			{
+				stateStarted = true;
+			}
+			else if (stateStarted)
+			{
+				yield break;
+			}
+
+			elapsed += Time.deltaTime;
+			yield return null;
+		}
+	}
+
+	private void UpdateAnimation()
+	{
+		if (agent == null)
+			return;
+
+		Vector2 velocity = agent.enabled ? agent.velocity : Vector2.zero;
+		if (spriteRenderer != null && Mathf.Abs(velocity.x) > 0.05f)
+			spriteRenderer.flipX = velocity.x < 0f;
+
+		if (animator == null)
+			return;
+
+		bool locked = currentState == MonsterState.Alert ||
+			currentState == MonsterState.Stagger ||
+			currentState == MonsterState.Stunned ||
+			currentState == MonsterState.Kill;
+		animator.SetFloat("Speed", locked ? 0f : velocity.magnitude);
 	}
 
 	// =========================
@@ -327,6 +416,7 @@ public class MonsterAI : MonoBehaviour, IDamageable
 
 		// ไม่รับเสียงขณะอยู่ในสถานะที่ไม่ควรถูกรบกวน
 		if (currentState == MonsterState.Chase ||
+			currentState == MonsterState.Alert ||
 			currentState == MonsterState.Stagger ||
 			currentState == MonsterState.Stunned ||
 			currentState == MonsterState.Kill)
@@ -386,6 +476,9 @@ public class MonsterAI : MonoBehaviour, IDamageable
 		targetSacrificeEffects = target != null
 			? target.GetComponent<SacrificeEffectReceiver>()
 			: null;
+		targetHeartRate = target != null
+			? target.GetComponent<HeartRateSystem>()
+			: null;
 
 		if (target != null)
 		{
@@ -394,6 +487,17 @@ public class MonsterAI : MonoBehaviour, IDamageable
 			if (playerRb == null)
 				playerRb = target.GetComponent<Rigidbody2D>();
 		}
+	}
+
+	private void PublishThreatState()
+	{
+		if (targetHeartRate == null)
+			return;
+
+		targetHeartRate.SetMonsterThreatState(
+			playerVision != null && playerVision.CanSeePosition(transform.position),
+			currentState == MonsterState.Chase
+		);
 	}
 
 	private void UpdateChase()
@@ -411,14 +515,13 @@ public class MonsterAI : MonoBehaviour, IDamageable
 
 	private bool CheckKillDistance()
 	{
-		if (isAttackRecovering)
+		if (isAttackRecovering || currentState == MonsterState.Kill)
 			return true;
+		if (currentState != MonsterState.Chase)
+			return false;
 
 		if (vision == null || vision.Target == null)
 			return false;
-
-		if (currentState == MonsterState.Kill)
-			return true;
 
 		float distance = Vector2.Distance(
 			transform.position,
@@ -428,6 +531,7 @@ public class MonsterAI : MonoBehaviour, IDamageable
 		if (distance > killDistance)
 			return false;
 
+		PlayAttackAnimation();
 		AudioManager.Instance?.PlayRandomSfxAt(
 			transform.position,
 			SoundId.MonsterAttack1,
@@ -443,7 +547,28 @@ public class MonsterAI : MonoBehaviour, IDamageable
 			StartCoroutine(MissedAttackRecovery());
 		else
 			KillPlayer();
+
 		return true;
+	}
+
+	private void PlayAttackAnimation()
+	{
+		string attackTrigger = GetAttackTrigger();
+		animator?.ResetTrigger(attackTrigger);
+		animator?.SetTrigger(attackTrigger);
+	}
+
+	private string GetAttackTrigger()
+	{
+		Vector2 playerFromMonster = (Vector2)(target.position - transform.position);
+		if (Mathf.Abs(playerFromMonster.y) <= 0.7f)
+		{
+			if (spriteRenderer != null && Mathf.Abs(playerFromMonster.x) > 0.01f)
+				spriteRenderer.flipX = playerFromMonster.x < 0f;
+			return "AttackSide";
+		}
+
+		return playerFromMonster.y > 0f ? "AttackUp" : "AttackDown";
 	}
 
 	private IEnumerator MissedAttackRecovery()
@@ -478,7 +603,8 @@ public class MonsterAI : MonoBehaviour, IDamageable
 		if (agent != null && agent.enabled && agent.isOnNavMesh &&
 			currentState != MonsterState.Stagger &&
 			currentState != MonsterState.Stunned &&
-			currentState != MonsterState.Kill)
+			currentState != MonsterState.Kill &&
+			currentState != MonsterState.Alert)
 		{
 			agent.isStopped = false;
 		}
@@ -486,7 +612,7 @@ public class MonsterAI : MonoBehaviour, IDamageable
 
 	private void KillPlayer()
 	{
-		currentState = MonsterState.Kill;
+		SetState(MonsterState.Kill);
 
 		// หยุดมอนสเตอร์
 		if (agent != null && agent.enabled)
@@ -514,10 +640,11 @@ public class MonsterAI : MonoBehaviour, IDamageable
 	{
 		if (currentState == MonsterState.Stagger ||
 			currentState == MonsterState.Stunned ||
-			currentState == MonsterState.Kill)
+			currentState == MonsterState.Kill ||
+			currentState == MonsterState.Alert)
 			return;
 
-		currentState = MonsterState.Investigate;
+		SetState(MonsterState.Investigate);
 
 		reachedSearchPosition = false;
 		searchTimer = searchDuration;
@@ -575,13 +702,20 @@ public class MonsterAI : MonoBehaviour, IDamageable
 	{
 		if (staggerCoroutine != null)
 			StopCoroutine(staggerCoroutine);
-
+		if (screamCoroutine != null)
+		{
+			StopCoroutine(screamCoroutine);
+			screamCoroutine = null;
+		}
 		wasChasingBeforeStagger =
 			currentState == MonsterState.Chase;
 
-		previousState = currentState;
+		previousState = currentState == MonsterState.Alert
+			? MonsterState.Investigate
+			: currentState;
 
-		currentState = MonsterState.Stagger;
+		isAttackRecovering = false;
+		SetState(MonsterState.Stagger);
 
 		SetStaggerColor(true);
 
@@ -600,9 +734,7 @@ public class MonsterAI : MonoBehaviour, IDamageable
 		SetStaggerColor(false);
 
 		staggerCoroutine = null;
-
-		currentState = previousState;
-		agent.isStopped = false;
+		SetState(previousState);
 
 		if (wasChasingBeforeStagger)
 		{
@@ -610,14 +742,18 @@ public class MonsterAI : MonoBehaviour, IDamageable
 			yield break;
 		}
 
-		switch (currentState)
+		switch (previousState)
 		{
 			case MonsterState.Patrol:
-				isWaiting = false;
-				MoveToPatrolPoint();
+				SetState(MonsterState.Patrol);
 				break;
 
 			case MonsterState.Investigate:
+				StartSearching();
+				break;
+
+			default:
+				SetState(MonsterState.Patrol);
 				break;
 		}
 	}
@@ -634,15 +770,23 @@ public class MonsterAI : MonoBehaviour, IDamageable
 
 	private IEnumerator SlowRoutine(float multiplier, float duration)
 	{
-		agent.speed = normalSpeed * Mathf.Clamp01(multiplier);
+		agent.speed = GetStateMovementSpeed() * Mathf.Clamp01(multiplier);
 
 		yield return new WaitForSeconds(duration);
 
-		agent.speed = currentState == MonsterState.Patrol
-			? patrolSpeed
-			: normalSpeed;
+		agent.speed = GetStateMovementSpeed();
 
 		slowCoroutine = null;
+	}
+
+	private float GetStateMovementSpeed()
+	{
+		return currentState switch
+		{
+			MonsterState.Patrol => patrolSpeed,
+			MonsterState.Chase => chaseSpeed,
+			_ => normalSpeed
+		};
 	}
 
 	private void FlashRed()
@@ -713,6 +857,11 @@ public class MonsterAI : MonoBehaviour, IDamageable
 		}
 
 		currentState = newState;
+		if (agent != null)
+			agent.speed = GetStateMovementSpeed();
+
+		if (animator != null)
+			animator.SetBool("Chase", newState == MonsterState.Chase);
 
 		if (agent == null || !agent.enabled || !agent.isOnNavMesh)
 			return;
@@ -730,6 +879,7 @@ public class MonsterAI : MonoBehaviour, IDamageable
 				agent.isStopped = false;
 				break;
 
+			case MonsterState.Alert:
 			case MonsterState.Stagger:
 			case MonsterState.Stunned:
 			case MonsterState.Kill:
@@ -750,6 +900,7 @@ public class MonsterAI : MonoBehaviour, IDamageable
 	{
 		return currentState == MonsterState.Stagger ||
 			   currentState == MonsterState.Stunned ||
-			   currentState == MonsterState.Kill;
+			   currentState == MonsterState.Kill ||
+			   currentState == MonsterState.Alert;
 	}
 }

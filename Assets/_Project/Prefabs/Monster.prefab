@@ -28,7 +28,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 5, y: 5, z: 5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 4326770757002580926}
@@ -91,7 +91,7 @@ SpriteRenderer:
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
-  m_SpriteSortPoint: 0
+  m_SpriteSortPoint: 1
 --- !u!95 &3879193027063662446
 Animator:
   serializedVersion: 7
@@ -185,7 +185,7 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: -0.0025648475, y: 0.24279329}
+  m_Offset: {x: 0.00041389465, y: 0.24279329}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.28866667}
@@ -195,7 +195,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.49054158, y: 0.4862905}
+  m_Size: {x: 0.63944817, y: 0.4862905}
   m_EdgeRadius: 0
 --- !u!195 &3698071276816288485
 NavMeshAgent:
@@ -235,6 +235,11 @@ MonoBehaviour:
   currentStaggerHP: 100
   staggerDuration: 5
   target: {fileID: 0}
+  killDistance: 0.7
+  missRecoveryMin: 1
+  missRecoveryMax: 2
+  playerController: {fileID: 0}
+  playerRb: {fileID: 0}
   patrolPoints:
   - {fileID: 0}
   - {fileID: 0}
@@ -261,6 +266,8 @@ MonoBehaviour:
   - {fileID: 0}
   patrolSpeed: 2
   waitAtPoint: 1
+  loseSightDelay: 0.5
+  searchDuration: 3
   spriteRenderer: {fileID: 5267957057255899516}
   hitFlashDuration: 0.1
 --- !u!114 &6786020743201301400

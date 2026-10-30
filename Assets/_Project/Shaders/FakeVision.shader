@@ -6,6 +6,7 @@ Shader "ThaiHorrorJam/FakeVision"
         _MainTex ("Source", 2D) = "white" {}
         _OcclusionTex ("Occlusion Mask", 2D) = "white" {}
         _SelectiveTex ("Selective Objects", 2D) = "black" {}
+        _UnoccludedMonsterTex ("Unoccluded Monsters", 2D) = "black" {}
 
         _Darkness ("Darkness", Range(0, 1)) = 0.94
 
@@ -35,6 +36,7 @@ Shader "ThaiHorrorJam/FakeVision"
             sampler2D _MainTex;
             sampler2D _OcclusionTex;
             sampler2D _SelectiveTex;
+            sampler2D _UnoccludedMonsterTex;
 
             float4 _MainTex_TexelSize;
 
@@ -140,12 +142,18 @@ Shader "ThaiHorrorJam/FakeVision"
 
                 source.rgb *= 1.0 - darknessAmount;
 
-                // Composite selective layers only where visible.
+                // Composite eligible selective sprites after darkening the scene.
                 fixed4 selective =
                     tex2D(_SelectiveTex, uv);
 
+                // Clear-center monsters bypass only the wall mask; their color and
+                // alpha still come from the normally sorted selective render.
+                fixed4 unoccludedMonsterMask =
+                    tex2D(_UnoccludedMonsterTex, uv);
+                float bypassOcclusion = step(0.001, unoccludedMonsterMask.a);
+                float spriteOcclusion = max(occlusion, bypassOcclusion);
                 float selectiveAlpha =
-                    saturate(selective.a * visibility);
+                    saturate(selective.a * spriteOcclusion);
 
                 source.rgb = lerp(
                     source.rgb,

@@ -16,78 +16,102 @@ MonoBehaviour:
   - id: 0
     placement: 1
     displayName: Touch
-    goodEffect: Keeps momentum while moving.
-    badEffect: Acceleration and braking are reduced.
-    icon: {fileID: 0}
+    goodEffect: Movement speed increases by 1.5.
+    badEffect: Acceleration and deceleration are reduced by 50%.
+    icon: {fileID: -1624108181874779714, guid: f1ac2392239062e44a87a0707b0f4584, type: 3}
     accelerationMultiplier: 0.5
     decelerationMultiplier: 0.5
+    touchSpeedBonus: 1.5
     attackRangeMultiplier: 1.25
     visionAngleOffset: -15
     sfxVolumeOffsetDb: -6
+    eyesNearVisionRadius: 0.8
+    eyesConeVisibilityMultiplier: 0
+    eyesHalfStrengthConeLengthMultiplier: 0.5
     attackMissChance: 0.15
     missRecoveryMin: 1
     missRecoveryMax: 2
     halfStrengthSprintMaxBpm: 130
     hideHudAtFullStrength: 1
+    soundEmitterRadiusMultiplier: 0.5
   - id: 1
     placement: 3
     displayName: Eyes
-    goodEffect: Attack range increases by 25%.
-    badEffect: Vision cone narrows by 15 degrees.
-    icon: {fileID: 0}
+    goodEffect: Attack range increases.
+    badEffect: Near vision radius drops to 0.8; full strength closes the cone.
+    icon: {fileID: 5141760670510271424, guid: 835ab571085fa4f45b0db9fb247261c7, type: 3}
     accelerationMultiplier: 0.5
     decelerationMultiplier: 0.5
+    touchSpeedBonus: 1.5
     attackRangeMultiplier: 1.25
     visionAngleOffset: -15
     sfxVolumeOffsetDb: -6
+    eyesNearVisionRadius: 0.8
+    eyesConeVisibilityMultiplier: 0
+    eyesHalfStrengthConeLengthMultiplier: 0.5
     attackMissChance: 0.15
     missRecoveryMin: 1
     missRecoveryMax: 2
     halfStrengthSprintMaxBpm: 130
     hideHudAtFullStrength: 1
+    soundEmitterRadiusMultiplier: 0.5
   - id: 2
     placement: 2
     displayName: Heart
-    goodEffect: 15% chance to survive a monster grab.
+    goodEffect: Have a chance to survive a monster grab.
     badEffect: You can no longer sprint.
-    icon: {fileID: 0}
+    icon: {fileID: 4606908045521496030, guid: 203d2347fea5acc43b04aceb876acee7, type: 3}
     accelerationMultiplier: 0.5
     decelerationMultiplier: 0.5
+    touchSpeedBonus: 1.5
     attackRangeMultiplier: 1.25
     visionAngleOffset: -15
     sfxVolumeOffsetDb: -6
+    eyesNearVisionRadius: 0.8
+    eyesConeVisibilityMultiplier: 0
+    eyesHalfStrengthConeLengthMultiplier: 0.5
     attackMissChance: 0.15
     missRecoveryMin: 1
     missRecoveryMax: 2
     halfStrengthSprintMaxBpm: 130
     hideHudAtFullStrength: 1
+    soundEmitterRadiusMultiplier: 0.5
   - id: 3
     placement: 0
     displayName: Ears
-    goodEffect: Vision cone widens by 15 degrees.
-    badEffect: SFX volume is reduced by 6 dB.
-    icon: {fileID: 0}
+    goodEffect: Vision cone widens.
+    badEffect: Sound hearing is reduce.
+    icon: {fileID: 6007483823391632850, guid: ab163fc674e3fe047aaf8f652d7db1ef, type: 3}
     accelerationMultiplier: 0.5
     decelerationMultiplier: 0.5
+    touchSpeedBonus: 1.5
     attackRangeMultiplier: 1.25
     visionAngleOffset: 15
     sfxVolumeOffsetDb: -6
+    eyesNearVisionRadius: 0.8
+    eyesConeVisibilityMultiplier: 0
+    eyesHalfStrengthConeLengthMultiplier: 0.5
     attackMissChance: 0.15
     missRecoveryMin: 1
     missRecoveryMax: 2
     halfStrengthSprintMaxBpm: 130
     hideHudAtFullStrength: 1
+    soundEmitterRadiusMultiplier: 0.5
   - id: 4
     placement: 3
     displayName: Voice
-    goodEffect: Player-made sounds reach monsters at half the radius.
+    goodEffect: You made less noise.
     badEffect: The HUD is hidden.
-    icon: {fileID: 0}
+    icon: {fileID: -1617825573862161452, guid: b535241d6beeecb43803e398f1b0876b, type: 3}
     accelerationMultiplier: 0.5
     decelerationMultiplier: 0.5
+    touchSpeedBonus: 1.5
     attackRangeMultiplier: 1.25
     visionAngleOffset: -15
     sfxVolumeOffsetDb: -6
+    eyesNearVisionRadius: 0.8
+    eyesConeVisibilityMultiplier: 0
+    eyesHalfStrengthConeLengthMultiplier: 0.5
     attackMissChance: 0.15
     missRecoveryMin: 1
     missRecoveryMax: 2

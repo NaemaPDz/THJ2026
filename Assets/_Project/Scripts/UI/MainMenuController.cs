@@ -1,3 +1,4 @@
+using System.Collections;
 using TMPro;
 using UnityEngine;
 using UnityEngine.Audio;
@@ -19,13 +20,11 @@ public sealed class MainMenuController : MonoBehaviour
 
 	[SerializeField] private GameObject mainPanel;
 	[SerializeField] private GameObject optionPanel;
-	[SerializeField] private GameObject loadPanel;
+	[SerializeField] private GameObject loadingPanel;
 	[SerializeField] private Button startButton;
 	[SerializeField] private Button optionsButton;
-	[SerializeField] private Button loadButton;
 	[SerializeField] private Button quitButton;
 	[SerializeField] private Button optionsBackButton;
-	[SerializeField] private Button loadBackButton;
 	[SerializeField] private Button masterMinusButton;
 	[SerializeField] private Button masterPlusButton;
 	[SerializeField] private TMP_Text masterValueText;
@@ -60,10 +59,8 @@ public sealed class MainMenuController : MonoBehaviour
 	{
 		AddListener(startButton, StartGame);
 		AddListener(optionsButton, ShowOptions);
-		AddListener(loadButton, ShowLoadPanel);
 		AddListener(quitButton, QuitGame);
 		AddListener(optionsBackButton, ReturnToMainMenu);
-		AddListener(loadBackButton, ReturnToMainMenu);
 		AddListener(masterMinusButton, DecreaseMasterVolume);
 		AddListener(masterPlusButton, IncreaseMasterVolume);
 		AddListener(sfxMinusButton, DecreaseSfxVolume);
@@ -97,10 +94,8 @@ public sealed class MainMenuController : MonoBehaviour
 	{
 		RemoveListener(startButton, StartGame);
 		RemoveListener(optionsButton, ShowOptions);
-		RemoveListener(loadButton, ShowLoadPanel);
 		RemoveListener(quitButton, QuitGame);
 		RemoveListener(optionsBackButton, ReturnToMainMenu);
-		RemoveListener(loadBackButton, ReturnToMainMenu);
 		RemoveListener(masterMinusButton, DecreaseMasterVolume);
 		RemoveListener(masterPlusButton, IncreaseMasterVolume);
 		RemoveListener(sfxMinusButton, DecreaseSfxVolume);
@@ -113,7 +108,7 @@ public sealed class MainMenuController : MonoBehaviour
 	{
 		SetPanelActive(mainPanel, true);
 		SetPanelActive(optionPanel, false);
-		SetPanelActive(loadPanel, false);
+		SetPanelActive(loadingPanel, false);
 	}
 
 	private void ShowOptions()
@@ -121,15 +116,7 @@ public sealed class MainMenuController : MonoBehaviour
 		AudioManager.Instance?.PlaySfx2D(SoundId.UiButtonConfirm);
 		SetPanelActive(mainPanel, false);
 		SetPanelActive(optionPanel, true);
-		SetPanelActive(loadPanel, false);
-	}
-
-	private void ShowLoadPanel()
-	{
-		AudioManager.Instance?.PlaySfx2D(SoundId.UiButtonConfirm);
-		SetPanelActive(mainPanel, false);
-		SetPanelActive(optionPanel, false);
-		SetPanelActive(loadPanel, true);
+		SetPanelActive(loadingPanel, false);
 	}
 
 	private void ReturnToMainMenu()
@@ -146,7 +133,18 @@ public sealed class MainMenuController : MonoBehaviour
 			return;
 		}
 
+		StartCoroutine(StartGameCoroutine());
+	}
+
+	private IEnumerator StartGameCoroutine()
+	{
 		AudioManager.Instance?.PlaySfx2D(SoundId.UiStartGame);
+		loadingPanel.SetActive(true);
+		mainPanel.SetActive(false);
+		optionPanel.SetActive(false);
+
+		yield return new WaitForSeconds(2f);
+
 		FaustRunState.BeginNewRun();
 		SceneManager.LoadScene(Stage1SceneName);
 	}

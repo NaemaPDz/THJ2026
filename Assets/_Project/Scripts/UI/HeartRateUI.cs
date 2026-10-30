@@ -3,33 +3,28 @@ using UnityEngine;
 
 public class HeartRateUI : MonoBehaviour
 {
-	public HeartRateSystem heartRate;
-	public TMP_Text bpmText;
+	private const float BaseAnimationBpm = 80f;
+	private const float TripleSpeedBpm = 180f;
+	private const float MaximumAnimationSpeed = 3f;
 
-	public Color normalColor = Color.white;
-	public Color warningColor = Color.yellow;
-	public Color dangerColor = Color.red;
+	public HeartRateSystem heartRate;
+	private Animator heartbeatAnimator;
+
+	private void Awake()
+	{
+		heartbeatAnimator = GetComponent<Animator>();
+	}
 
 	private void Update()
 	{
-		if (heartRate == null || bpmText == null)
+		if (heartRate == null)
 			return;
 
 		float bpm = heartRate.CurrentBPM;
-
-		bpmText.text = $"{Mathf.RoundToInt(bpm)} BPM";
-
-		if (bpm >= heartRate.maxBPM - 30)
+		if (heartbeatAnimator != null)
 		{
-			bpmText.color = dangerColor;
-		}
-		else if (bpm >= heartRate.recoverBPM)
-		{
-			bpmText.color = warningColor;
-		}
-		else
-		{
-			bpmText.color = normalColor;
+			float bpmProgress = Mathf.InverseLerp(BaseAnimationBpm, TripleSpeedBpm, bpm);
+			heartbeatAnimator.speed = Mathf.Lerp(1f, MaximumAnimationSpeed, bpmProgress);
 		}
 	}
 }

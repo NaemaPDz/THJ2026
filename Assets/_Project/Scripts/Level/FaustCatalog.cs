@@ -32,11 +32,15 @@ public sealed class FaustDefinition
 	[Header("Touch")]
 	[Range(0f, 1f)] public float accelerationMultiplier = 0.5f;
 	[Range(0f, 1f)] public float decelerationMultiplier = 0.5f;
+	[Min(0f)] public float touchSpeedBonus = 1.5f;
 
 	[Header("Eyes / Ears")]
 	[Min(1f)] public float attackRangeMultiplier = 1.25f;
 	public float visionAngleOffset = -15f;
 	public float sfxVolumeOffsetDb = -6f;
+	[Min(0.1f)] public float eyesNearVisionRadius = 0.8f;
+	[Range(0f, 1f)] public float eyesConeVisibilityMultiplier;
+	[Range(0f, 1f)] public float eyesHalfStrengthConeLengthMultiplier = 0.5f;
 
 	[Header("Heart")]
 	[Range(0f, 1f)] public float attackMissChance = 0.15f;
@@ -69,8 +73,13 @@ public sealed class FaustEffectProfile
 {
 	public float AccelerationMultiplier = 1f;
 	public float DecelerationMultiplier = 1f;
+	public float MovementSpeedBonus;
 	public float AttackRangeMultiplier = 1f;
 	public float VisionAngleOffset;
+	public float EyesNearVisionRadius = 0.8f;
+	public float EyesSacrificeStrength;
+	public float EyesConeLengthMultiplier = 1f;
+	public float EyesConeVisibilityMultiplier = 1f;
 	public float SfxVolumeOffsetDb;
 	public float SoundEmitterRadiusMultiplier = 1f;
 	public float AttackMissChance;

@@ -9,7 +9,7 @@ public class ItemUseController : MonoBehaviour
 	[SerializeField] private MeleeAttack meleeAttack;
 	[SerializeField] private RangeAttack rangeAttack;
 	[SerializeField, Min(0f)] private float keyUseRange = 1f;
-	[SerializeField, Min(0f)] private float keyUseHearingRadius = 5f;
+	[SerializeField, Min(0f)] private float keyUseHearingRadius = 10f;
 	private SacrificeEffectReceiver sacrificeEffects;
 	private DocumentReaderUI documentReader;
 
@@ -20,9 +20,6 @@ public class ItemUseController : MonoBehaviour
 		if (inventory == null)
 			inventory = GetComponent<InventorySystem>();
 		sacrificeEffects = GetComponent<SacrificeEffectReceiver>();
-		documentReader = GetComponent<DocumentReaderUI>();
-		if (documentReader == null)
-			documentReader = gameObject.AddComponent<DocumentReaderUI>();
 
 		if (equipment == null)
 		{
@@ -31,6 +28,11 @@ public class ItemUseController : MonoBehaviour
 				this
 			);
 		}
+	}
+
+	private void Start()
+	{
+		documentReader = FindFirstObjectByType<DocumentReaderUI>();
 	}
 
 	private void Update()
@@ -77,10 +79,18 @@ public class ItemUseController : MonoBehaviour
 
 		if (item.Data is DocData document)
 		{
+			SoundEmitter.EmitSound(
+				transform.position,
+				GetAdjustedHearingRadius(2f)
+			);
 			documentReader?.Open(document);
 			return;
 		}
 
+		SoundEmitter.EmitSound(
+			transform.position,
+			GetAdjustedHearingRadius(3f)
+		);
 		PlayUseSound(item.Data);
 		Debug.Log($"[ItemUse] ใช้ไอเทม: {item.Data.itemName}");
 	}
@@ -153,7 +163,7 @@ public class ItemUseController : MonoBehaviour
 		if (weapon == null)
 			return;
 
-		SoundEmitter.EmitSound(transform.position, GetAdjustedHearingRadius(5f));
+		SoundEmitter.EmitSound(transform.position, GetAdjustedHearingRadius(7f));
 
 		if (weapon.WeaponData.attackType == AttackType.Melee)
 		{

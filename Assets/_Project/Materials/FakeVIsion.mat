@@ -67,13 +67,17 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _UnoccludedMonsterTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
     - _BumpScale: 1
-    - _ConeAngle: 90
-    - _ConeAngleSoftness: 0
+    - _ConeAngle: 85
+    - _ConeAngleSoftness: 5
     - _ConeLength: 5
-    - _ConeSoftness: 0.01
+    - _ConeSoftness: 2
     - _Cutoff: 0.5
     - _Darkness: 0.95
     - _DetailNormalMapScale: 1
@@ -83,8 +87,8 @@ Material:
     - _GlossyReflections: 1
     - _Metallic: 0
     - _Mode: 0
-    - _NearRadius: 1
-    - _NearSoftness: 0.01
+    - _NearRadius: 1.8
+    - _NearSoftness: 2
     - _OcclusionStrength: 1
     - _Parallax: 0.02
     - _SmoothnessTextureChannel: 0

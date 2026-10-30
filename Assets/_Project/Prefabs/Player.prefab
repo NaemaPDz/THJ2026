@@ -105,7 +105,7 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: -0.024404198, y: 0.053}
+  m_Offset: {x: -0.028281137, y: 0.046538442}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.28866667}
@@ -115,7 +115,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 0.36716175, y: 0.10670397}
+  m_Size: {x: 0.35940787, y: 0.10928851}
   m_EdgeRadius: 0
 --- !u!114 &4184068051470426352
 MonoBehaviour:
@@ -135,6 +135,14 @@ MonoBehaviour:
   recoveryDelay: 2
   sprintIncreaseRate: 10
   recoveryRate: 5
+  sightBpm: 100
+  chaseBpm: 120
+  sightRiseDuration: 3
+  chaseRiseDuration: 4
+  threatRecoveryDelay: 3
+  soundEmitInterval: 1
+  minimumHearingRadius: 1
+  maximumHearingRadius: 2
 --- !u!114 &7792097828402460840
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -149,6 +157,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PlayerController
   walkSpeed: 2
   sprintSpeed: 3
+  walkAcceleration: 16
+  sprintAcceleration: 20
+  walkDeceleration: 24
+  sprintDeceleration: 28
+  walkFootstepHearingRadius: 3
+  sprintFootstepHearingRadius: 5
 --- !u!114 &9217201189355713609
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -180,6 +194,7 @@ MonoBehaviour:
   inventory: {fileID: 5756516855469864377}
   pickupDistance: 0.5
   pickupOrigin: {fileID: 905125978032730050}
+  pickupHearingRadius: 2
 --- !u!114 &6399444797440640283
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -197,7 +212,7 @@ MonoBehaviour:
   meleeAttack: {fileID: 1595487202588964267}
   rangeAttack: {fileID: 6385524519493185394}
   keyUseRange: 1
-  keyUseHearingRadius: 5
+  keyUseHearingRadius: 10
 --- !u!114 &1595487202588964267
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -237,9 +252,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3f8a97c5b27e4d3f9db163310a16f9d2, type: 3}
-  m_Name:
+  m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::SacrificeEffectReceiver
   attackRangeMultiplier: 1
+  movementSpeedBonus: 0
   soundEmitterRadiusMultiplier: 1
   accelerationMultiplier: 1
   decelerationMultiplier: 1
@@ -289,7 +305,6 @@ GameObject:
   - component: {fileID: 404627456499781039}
   - component: {fileID: 5756516855469864377}
   - component: {fileID: 2066753748830185271}
-  - component: {fileID: 5926151489719384171}
   m_Layer: 6
   m_Name: Inventory
   m_TagString: Untagged
@@ -337,21 +352,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::EquipmentSystem
   inventory: {fileID: 5756516855469864377}
---- !u!114 &5926151489719384171
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8026032196920324432}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 61133bf05d45fc24aa4ab2e2d7f60166, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: Assembly-CSharp::HotbarTestSetup
-  stunGunData: {fileID: 11400000, guid: a6fa776197b260b4eb594001a1a1ab31, type: 2}
-  batonData: {fileID: 11400000, guid: 33703415f568bc344b1759bbcea589f1, type: 2}
-  pipeData: {fileID: 11400000, guid: 6c6ab18399f15df4ab9eb6385fd7b5d7, type: 2}
 --- !u!1 &8619530874779094986
 GameObject:
   m_ObjectHideFlags: 0
@@ -380,7 +380,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 5, y: 5, z: 5}
+  m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 6931030114759181873}
@@ -443,7 +443,7 @@ SpriteRenderer:
   m_AdaptiveModeThreshold: 0.5
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
-  m_SpriteSortPoint: 0
+  m_SpriteSortPoint: 1
 --- !u!95 &4606845825739836072
 Animator:
   serializedVersion: 7

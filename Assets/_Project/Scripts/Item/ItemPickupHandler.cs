@@ -9,6 +9,9 @@ public class ItemPickupHandler : MonoBehaviour
 	[Header("Pickup Settings")]
 	[SerializeField] private float pickupDistance = 0.8f;
 	[SerializeField] private Transform pickupOrigin;
+	[SerializeField, Min(0f)] private float pickupHearingRadius = 2f;
+	private SacrificeEffectReceiver sacrificeEffects;
+	private DocumentReaderUI documentReader;
 
 	private void Awake()
 	{
@@ -22,11 +25,18 @@ public class ItemPickupHandler : MonoBehaviour
 				this
 			);
 		}
+
+		sacrificeEffects = GetComponent<SacrificeEffectReceiver>();
+	}
+
+	private void Start()
+	{
+		documentReader = FindFirstObjectByType<DocumentReaderUI>();
 	}
 
 	private void Update()
 	{
-		if (!FaustRunState.GameplayActive || inventory == null)
+		if (!FaustRunState.GameplayActive || (documentReader != null && documentReader.IsOpen))
 			return;
 
 		if (InputSystem.actions["Interact"].WasPressedThisFrame())
@@ -44,17 +54,48 @@ public class ItemPickupHandler : MonoBehaviour
 
 		foreach (Collider2D hit in hits)
 		{
+			GameFinisher finisher = hit.GetComponent<GameFinisher>();
+			if (finisher == null)
+				continue;
+
+			finisher.FinishRun();
+			return;
+		}
+
+		foreach (Collider2D hit in hits)
+		{
 			WorldItem worldItem = hit.GetComponent<WorldItem>();
 
 			if (worldItem == null)
 				continue;
 
+			if (worldItem.IsDocument)
+			{
+				float soundMultiplier = sacrificeEffects != null
+					? sacrificeEffects.SoundEmitterRadiusMultiplier
+					: 1f;
+				SoundEmitter.EmitSound(transform.position, 2f * soundMultiplier);
+				documentReader?.Open(worldItem.DocumentText);
+				Debug.Log($"[Document] เปิดอ่าน {worldItem.name}", this);
+				return;
+			}
+
 			if (worldItem.Item == null)
 				continue;
+
+			if (inventory == null)
+				return;
 
 			if (inventory.TryAddItem(worldItem.Item))
 			{
 				AudioManager.Instance?.PlaySfxAt(SoundId.PlayerItemGet, transform.position);
+				float soundMultiplier = sacrificeEffects != null
+					? sacrificeEffects.SoundEmitterRadiusMultiplier
+					: 1f;
+				SoundEmitter.EmitSound(
+					transform.position,
+					pickupHearingRadius * soundMultiplier
+				);
 				Debug.Log(
 					$"[Pickup] เก็บ {worldItem.Item.Data.itemName} สำเร็จ",
 					this

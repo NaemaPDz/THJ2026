@@ -19,6 +19,9 @@ public sealed class FaustStageController : MonoBehaviour
 	private const string CatalogResourceName = "FaustCatalog";
 	private FaustCatalog catalog;
 	private Transform panelRoot;
+	private Transform faustIconRoot;
+	private Transform documentReaderRoot;
+	private readonly Dictionary<FaustId, GameObject> sacrificeIcons = new();
 	private readonly List<ChoiceCard> cards = new();
 	private readonly List<FaustDefinition> currentOffers = new();
 	private Button skipButton;
@@ -30,6 +33,8 @@ public sealed class FaustStageController : MonoBehaviour
 		catalog = Resources.Load<FaustCatalog>(CatalogResourceName);
 		currentStage = GetStageNumber(SceneManager.GetActiveScene().name);
 		panelRoot = transform.Find("FausePanel");
+		BindFaustIcons();
+		documentReaderRoot = transform.Find("DocumentReader");
 		if (panelRoot == null)
 			Debug.LogError("[Faust] FausePanel must be a child of the stage Canvas.", this);
 		BindPanel();
@@ -49,6 +54,7 @@ public sealed class FaustStageController : MonoBehaviour
 			panelRoot.gameObject.SetActive(true);
 
 		ApplyEffects(FaustRunState.BuildEffectProfile(catalog), true);
+		RefreshFaustIcons();
 		if (currentOffers.Count == 0)
 		{
 			FinishSelection();
@@ -109,6 +115,40 @@ public sealed class FaustStageController : MonoBehaviour
 			Debug.LogError("[Faust] Skip button is missing from the Faust Panel.", this);
 	}
 
+	private void BindFaustIcons()
+	{
+		faustIconRoot = transform.Find("FaustIcon");
+		if (faustIconRoot == null)
+		{
+			Debug.LogError("[Faust] FaustIcon must be a child of the stage Canvas.", this);
+			return;
+		}
+
+		BindFaustIcon(FaustId.Touch, "Icon_Touch");
+		BindFaustIcon(FaustId.Eyes, "Icon_Eye");
+		BindFaustIcon(FaustId.Heart, "Icon_Heart");
+		BindFaustIcon(FaustId.Ears, "Icon_Ear");
+		BindFaustIcon(FaustId.Voice, "Icon_Voice");
+	}
+
+	private void BindFaustIcon(FaustId id, string childName)
+	{
+		Transform icon = faustIconRoot.Find(childName);
+		if (icon == null)
+		{
+			Debug.LogError($"[Faust] Icon '{childName}' is missing from FaustIcon.", this);
+			return;
+		}
+
+		sacrificeIcons[id] = icon.gameObject;
+	}
+
+	private void RefreshFaustIcons()
+	{
+		foreach (KeyValuePair<FaustId, GameObject> icon in sacrificeIcons)
+			icon.Value.SetActive(!FaustRunState.IsSacrificed(icon.Key));
+	}
+
 	private ChoiceCard BindCard(string childName)
 	{
 		Transform cardTransform = panelRoot.Find(childName);
@@ -157,6 +197,7 @@ public sealed class FaustStageController : MonoBehaviour
 	{
 		FaustEffectProfile profile = FaustRunState.BuildEffectProfile(catalog);
 		ApplyEffects(profile, false);
+		RefreshFaustIcons();
 		if (panelRoot != null)
 			panelRoot.gameObject.SetActive(false);
 		FaustRunState.ReleaseGameplay();
@@ -175,7 +216,16 @@ public sealed class FaustStageController : MonoBehaviour
 		FakeVisionEffect vision = Camera.main != null
 			? Camera.main.GetComponent<FakeVisionEffect>()
 			: FindFirstObjectByType<FakeVisionEffect>();
-		vision?.SetVisionAngleOffset(profile.VisionAngleOffset);
+		if (vision != null)
+		{
+			vision.SetVisionAngleOffset(profile.VisionAngleOffset);
+			vision.SetEyesSacrifice(
+				profile.EyesNearVisionRadius,
+				profile.EyesSacrificeStrength,
+				profile.EyesConeLengthMultiplier,
+				profile.EyesConeVisibilityMultiplier
+			);
+		}
 		AudioManager.Instance?.SetSfxVolumeOffsetDb(profile.SfxVolumeOffsetDb);
 
 		if (profile.HideHud)
@@ -183,17 +233,11 @@ public sealed class FaustStageController : MonoBehaviour
 			Canvas hudCanvas = GetComponentInParent<Canvas>();
 			if (hudCanvas != null)
 			{
-				if (keepSelectionPanelVisible)
+				foreach (Transform child in hudCanvas.transform)
 				{
-					foreach (Transform child in hudCanvas.transform)
-					{
-						if (child != panelRoot)
-							child.gameObject.SetActive(false);
-					}
-				}
-				else
-				{
-					hudCanvas.enabled = false;
+					bool keepChild = child == faustIconRoot || child == documentReaderRoot ||
+						(keepSelectionPanelVisible && child == panelRoot);
+					child.gameObject.SetActive(keepChild);
 				}
 			}
 		}
@@ -203,8 +247,7 @@ public sealed class FaustStageController : MonoBehaviour
 			if (heartRateUi != null)
 			{
 				heartRateUi.enabled = false;
-				if (heartRateUi.bpmText != null)
-					heartRateUi.bpmText.gameObject.SetActive(false);
+				heartRateUi.gameObject.SetActive(false);
 			}
 		}
 	}

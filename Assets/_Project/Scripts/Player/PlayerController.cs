@@ -12,7 +12,7 @@ public class PlayerController : MonoBehaviour
 	[SerializeField, Min(0f)] private float sprintAcceleration = 20f;
 	[SerializeField, Min(0f)] private float walkDeceleration = 24f;
 	[SerializeField, Min(0f)] private float sprintDeceleration = 28f;
-	[SerializeField, Min(0f)] private float walkFootstepHearingRadius = 2f;
+	[SerializeField, Min(0f)] private float walkFootstepHearingRadius = 3f;
 	[SerializeField, Min(0f)] private float sprintFootstepHearingRadius = 5f;
 
 	private const string Stage1SceneName = "Stage1";
@@ -21,6 +21,7 @@ public class PlayerController : MonoBehaviour
 	private const string DeathStateName = "Death";
 	private const float DeathAnimationWaitTimeout = 2f;
 	private const float DeathSequenceHoldDuration = 1f;
+	private const float CutsceneStateStartTimeout = 1f;
 
 	private Rigidbody2D rb;
 	private HeartRateSystem heartRate;
@@ -81,6 +82,8 @@ public class PlayerController : MonoBehaviour
 		);
 
 		float speed = isSprinting ? sprintSpeed : walkSpeed;
+		if (sacrificeEffects != null)
+			speed += sacrificeEffects.MovementSpeedBonus;
 		float acceleration = isSprinting ? sprintAcceleration : walkAcceleration;
 		float deceleration = isSprinting ? sprintDeceleration : walkDeceleration;
 		if (sacrificeEffects != null)
@@ -160,6 +163,7 @@ public class PlayerController : MonoBehaviour
 			SoundId.PlayerHurt1,
 			SoundId.PlayerHurt2
 		);
+		SoundEmitter.EmitSound(transform.position, 7f * GetSoundEmitterRadiusMultiplier());
 	}
 
 	public void Death()
@@ -199,18 +203,24 @@ public class PlayerController : MonoBehaviour
 		GameObject cutsceneRoot = FindDeathCutsceneRoot();
 		if (cutsceneRoot != null)
 		{
-			Animator cutsceneAnimator = cutsceneRoot.GetComponentInChildren<Animator>(true);
 			cutsceneRoot.SetActive(true);
+			Animator cutsceneAnimator = cutsceneRoot.GetComponentInChildren<Animator>(true);
 
 			if (cutsceneAnimator != null)
 			{
 				cutsceneAnimator.updateMode = AnimatorUpdateMode.UnscaledTime;
 				cutsceneAnimator.Play(DeathCutsceneStateName, 0, 0f);
-				cutsceneAnimator.Update(0f);
-
-				AnimatorStateInfo cutsceneState = cutsceneAnimator.GetCurrentAnimatorStateInfo(0);
-				if (cutsceneState.IsName(DeathCutsceneStateName))
+				float startElapsed = 0f;
+				while (!cutsceneAnimator.GetCurrentAnimatorStateInfo(0).IsName(DeathCutsceneStateName) &&
+					startElapsed < CutsceneStateStartTimeout)
 				{
+					startElapsed += Time.unscaledDeltaTime;
+					yield return null;
+				}
+
+				if (cutsceneAnimator.GetCurrentAnimatorStateInfo(0).IsName(DeathCutsceneStateName))
+				{
+					AnimatorStateInfo cutsceneState = cutsceneAnimator.GetCurrentAnimatorStateInfo(0);
 					float elapsed = 0f;
 					float timeout = cutsceneState.length + 1f;
 					while (cutsceneAnimator.GetCurrentAnimatorStateInfo(0).normalizedTime < 1f && elapsed < timeout)
@@ -245,6 +255,9 @@ public class PlayerController : MonoBehaviour
 		if (animator == null)
 			yield break;
 
+		// Play the short death clip directly so an exit-time transition from a looping
+		// movement/weapon animation cannot delay it past the fallback timeout.
+		animator.Play(DeathStateName, 0, 0f);
 		float elapsed = 0f;
 		while (elapsed < DeathAnimationWaitTimeout)
 		{

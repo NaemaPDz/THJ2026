@@ -17,6 +17,7 @@ public static class FaustRunState
 
 	public static bool GameplayActive { get; private set; }
 	public static bool HeartSacrificed => Applied.Exists(item => item.Id == FaustId.Heart);
+	public static bool IsSacrificed(FaustId id) => HasBeenApplied(id);
 
 	public static void BeginNewRun()
 	{
@@ -43,7 +44,6 @@ public static class FaustRunState
 		EnsureInitialized();
 		GameplayActive = false;
 		Time.timeScale = 0f;
-		AudioListener.pause = true;
 	}
 
 	public static void ReleaseGameplay()
@@ -53,6 +53,20 @@ public static class FaustRunState
 		AudioListener.pause = false;
 		foreach (MonsterAI monster in Object.FindObjectsByType<MonsterAI>(FindObjectsSortMode.None))
 			monster.ResumeAfterFaustSelection();
+	}
+
+	public static float PauseGameplayForDocument()
+	{
+		float resumeTimeScale = Time.timeScale;
+		GameplayActive = false;
+		Time.timeScale = 0f;
+		return resumeTimeScale;
+	}
+
+	public static void ResumeGameplayAfterDocument(float resumeTimeScale)
+	{
+		GameplayActive = true;
+		Time.timeScale = resumeTimeScale;
 	}
 
 	public static List<FaustDefinition> GetOffers(FaustCatalog catalog, int stage)
@@ -78,6 +92,39 @@ public static class FaustRunState
 
 			if (offeredStage == stage)
 				offers.Add(definition);
+		}
+
+		// Stage 3 keeps Heart as the final Faust, but can also bring back one
+		// unchosen option from an earlier stage so the player has a non-Heart path.
+		if (stage == 3)
+		{
+			FaustDefinition heart = offers.Find(offer => offer.id == FaustId.Heart);
+			FaustDefinition oldOffer = null;
+			foreach (FaustDefinition definition in catalog.Fausts)
+			{
+				if (definition == null || definition.id == FaustId.Heart || HasBeenApplied(definition.id))
+					continue;
+
+				int offeredStage = definition.placement switch
+				{
+					FaustStagePlacement.Stage1 => 1,
+					FaustStagePlacement.Stage2 => 2,
+					FaustStagePlacement.RandomStage1Or2 => definition.id == FaustId.Eyes ? eyesStage : voiceStage,
+					_ => 0
+				};
+
+				if (offeredStage is 1 or 2)
+				{
+					oldOffer = definition;
+					break;
+				}
+			}
+
+			offers.Clear();
+			if (heart != null)
+				offers.Add(heart);
+			if (oldOffer != null)
+				offers.Add(oldOffer);
 		}
 
 		return offers;
@@ -124,11 +171,19 @@ public static class FaustRunState
 				case FaustId.Touch:
 					profile.AccelerationMultiplier *= Mathf.Lerp(1f, definition.accelerationMultiplier, strength);
 					profile.DecelerationMultiplier *= Mathf.Lerp(1f, definition.decelerationMultiplier, strength);
+					profile.MovementSpeedBonus += definition.touchSpeedBonus * strength;
 					break;
 
 				case FaustId.Eyes:
 					profile.AttackRangeMultiplier *= Mathf.Lerp(1f, definition.attackRangeMultiplier, strength);
-					profile.VisionAngleOffset += definition.visionAngleOffset * strength;
+					profile.EyesNearVisionRadius = definition.eyesNearVisionRadius;
+					profile.EyesSacrificeStrength = Mathf.Clamp01(profile.EyesSacrificeStrength + strength);
+					profile.EyesConeLengthMultiplier = strength >= 1f
+						? 1f
+						: definition.eyesHalfStrengthConeLengthMultiplier;
+					profile.EyesConeVisibilityMultiplier = strength >= 1f
+						? definition.eyesConeVisibilityMultiplier
+						: 1f;
 					break;
 
 				case FaustId.Ears:
