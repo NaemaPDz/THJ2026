@@ -14,6 +14,7 @@ Shader "ThaiHorrorJam/FakeVision"
         _NearSoftness ("Near Edge Softness", Float) = 0.45
 
         _ConeLength ("Cone Length", Float) = 6.0
+        _ConeVisibility ("Cone Visibility", Range(0, 1)) = 1
         _ConeAngle ("Cone Angle", Range(10, 160)) = 70
         _ConeSoftness ("Cone Edge Softness", Float) = 0.35
         _ConeAngleSoftness ("Cone Angle Softness", Float) = 5
@@ -45,6 +46,7 @@ Shader "ThaiHorrorJam/FakeVision"
             float _NearSoftness;
 
             float _ConeLength;
+            float _ConeVisibility;
             float _ConeAngle;
             float _ConeSoftness;
             float _ConeAngleSoftness;
@@ -123,7 +125,7 @@ Shader "ThaiHorrorJam/FakeVision"
                     distanceToPlayer
                 );
 
-                float coneMask = angularMask * radialMask;
+                float coneMask = angularMask * radialMask * _ConeVisibility;
 
                 float visibility = max(
                     nearMask,

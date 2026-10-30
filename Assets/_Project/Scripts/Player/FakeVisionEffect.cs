@@ -75,6 +75,8 @@ public class FakeVisionEffect : MonoBehaviour
 		Shader.PropertyToID("_NearSoftness");
 	private static readonly int ConeLengthID =
 		Shader.PropertyToID("_ConeLength");
+	private static readonly int ConeVisibilityID =
+		Shader.PropertyToID("_ConeVisibility");
 	private static readonly int ConeAngleID =
 		Shader.PropertyToID("_ConeAngle");
 	private static readonly int ConeSoftnessID =
@@ -168,6 +170,7 @@ public class FakeVisionEffect : MonoBehaviour
 		visionMaterial.SetFloat(NearRadiusID, nearRadius);
 		visionMaterial.SetFloat(NearSoftnessID, nearSoftness);
 		visionMaterial.SetFloat(ConeLengthID, coneLength);
+		visionMaterial.SetFloat(ConeVisibilityID, coneVisibilityMultiplier);
 		visionMaterial.SetFloat(
 			ConeAngleID,
 			Mathf.Clamp(coneAngle + visionAngleOffset, 10f, 160f)

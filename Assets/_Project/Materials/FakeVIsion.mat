@@ -78,6 +78,7 @@ Material:
     - _ConeAngleSoftness: 5
     - _ConeLength: 5
     - _ConeSoftness: 2
+    - _ConeVisibility: 0
     - _Cutoff: 0.5
     - _Darkness: 0.95
     - _DetailNormalMapScale: 1

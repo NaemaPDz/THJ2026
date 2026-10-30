@@ -22,6 +22,10 @@ public class WorldItem : MonoBehaviour
 			{
 				Item = new WeaponInstance(weaponData);
 			}
+			else if (itemData is DocData docData)
+			{
+				Item = new ItemInstance(docData);
+			}
 			else
 			{
 				Item = new ItemInstance(itemData);

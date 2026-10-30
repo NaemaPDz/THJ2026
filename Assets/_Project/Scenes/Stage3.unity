@@ -30562,11 +30562,11 @@ PrefabInstance:
       objectReference: {fileID: 799949386}
     - target: {fileID: 6587931513545072090, guid: 1eaad9ceba361f04d9e755b2c88b0073, type: 3}
       propertyPath: chaseSpeed
-      value: 4.5
+      value: 3
       objectReference: {fileID: 0}
     - target: {fileID: 6587931513545072090, guid: 1eaad9ceba361f04d9e755b2c88b0073, type: 3}
       propertyPath: patrolSpeed
-      value: 3
+      value: 2
       objectReference: {fileID: 0}
     - target: {fileID: 6587931513545072090, guid: 1eaad9ceba361f04d9e755b2c88b0073, type: 3}
       propertyPath: waitAtPoint
