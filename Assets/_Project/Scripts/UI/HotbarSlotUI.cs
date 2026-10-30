@@ -5,7 +5,7 @@ using TMPro;
 public class HotbarSlotUI : MonoBehaviour
 {
 	[SerializeField] private Image slotIcons;
-	[SerializeField] private Image slotHighlights;
+	[SerializeField] private GameObject slotHighlights;
 	[SerializeField] private TextMeshProUGUI itemCountText;
 
 	private WeaponInstance subscribedWeapon;
@@ -44,7 +44,7 @@ public class HotbarSlotUI : MonoBehaviour
 
 	public void SetSelected(bool isSelected)
 	{
-		slotHighlights.enabled = isSelected;
+		slotHighlights.SetActive(isSelected);
 	}
 
 	private void UpdateAmmoText(int currentAmmo)

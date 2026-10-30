@@ -17,13 +17,13 @@ MonoBehaviour:
   description: 
   icon: {fileID: -8368242942608093680, guid: cbe22acc4e74a2b4da4f427dcb666bd8, type: 3}
   worldPrefab: {fileID: 6589807486413108434, guid: 26929ccd5903e3841bb58d803f201245, type: 3}
+  useSound: 13
   attackType: 0
   staggerDamage: 50
   attackCooldown: 1
-  range: 10
+  range: 2
   projectileSpeed: 0
   maxAmmo: 10
   unlimitedAmmo: 0
   slowMultiplier: 0.5
   slowDuration: 2
-  useSound: 13

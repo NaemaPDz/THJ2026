@@ -17,7 +17,17 @@ public class WorldItem : MonoBehaviour
 	private void Awake()
 	{
 		if (Item == null && itemData != null)
-			Item = new ItemInstance(itemData);
+		{
+			if (itemData is WeaponData weaponData)
+			{
+				Item = new WeaponInstance(weaponData);
+			}
+			else
+			{
+				Item = new ItemInstance(itemData);
+			}
+		}	
+
 	}
 
 	public void Initialize(ItemInstance item)

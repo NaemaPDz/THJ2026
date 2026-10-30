@@ -7,11 +7,6 @@ public class CameraFollow2D : MonoBehaviour
 	public float smoothSpeed = 5f;
 	public Vector3 offset = new Vector3(0f, 0f, -10f);
 
-	private void Awake()
-	{
-		Application.targetFrameRate = 30;
-	}
-
 	private void LateUpdate()
 	{
 		if (target == null)
